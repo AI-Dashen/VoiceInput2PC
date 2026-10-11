@@ -27,3 +27,7 @@
 脚本不会默认下载依赖。只有明确授权新下载后才使用 -FetchTailcat。构建使用原 VoiceInput2PCReceiver.spec，保持 VoiceInput2PCReceiver.exe 和 _internal 目录结构；生成的ZIP必须整包解压。版本校验、首次设置窗口和接收运行验证使用v0.7品牌。
 
 当前工作树缺少 Windows Tailcat EXE，且本机不是 Windows；未生成或验证Windows EXE，不能称Windows成品已完成。根级版本文案断言已随v0.7更新。
+
+## 后续完成：Windows成品已生成
+
+原Windows构建阻塞已由GitHub Actions解决。run 38159766736在windows-latest成功；99项测试执行，2项跳过，其余通过；构建脚本的版本/包结构与Windows启动检查成功。成品下载并回读核对SHA256，文件Download/VoiceInput2PC-v07/万能输入法-Windows-v0.7.0.zip（32525156字节）。无需用户自行编译，完整解压并运行VoiceInput2PCReceiver.exe；保持_internal目录。此结果不替代用户实际电脑的最终验收。代码已由用户最新GitHub授权commit/push，旧“不commit/push”记录为历史状态。

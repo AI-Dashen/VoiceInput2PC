@@ -19,3 +19,7 @@
 
 本地定向Python42项通过；其他既有Java检查见Evidence。自动真机批次被用户要求停止，不将中断批次写成全绿。用户后续自行验收。
 未commit、未push；不是正式公开发布。
+
+## 后续完成：Windows成品已生成
+
+原Windows构建阻塞已由GitHub Actions解决。run 38159766736在windows-latest成功；99项测试执行，2项跳过，其余通过；构建脚本的版本/包结构与Windows启动检查成功。成品下载并回读核对SHA256，文件Download/VoiceInput2PC-v07/万能输入法-Windows-v0.7.0.zip（32525156字节）。无需用户自行编译，完整解压并运行VoiceInput2PCReceiver.exe；保持_internal目录。此结果不替代用户实际电脑的最终验收。代码已由用户最新GitHub授权commit/push，旧“不commit/push”记录为历史状态。

@@ -1,0 +1,13 @@
+{
+  "run": "https://github.com/AMXOOO/VoiceInput2PC/actions/runs/38159766736",
+  "commit": "f745f2c9004a2ab89521dc7334499468f62b3f4b",
+  "build_host": "GitHub windows-latest",
+  "result": "PASS",
+  "shared_path": "/storage/emulated/0/Download/VoiceInput2PC-v07/万能输入法-Windows-v0.7.0.zip",
+  "bytes": 32525156,
+  "sha256": "5671a58e51d6a8008a66027e92f1afb36be16cb9e6f44cdc26b4c2d215795381",
+  "zip_entries": 1019,
+  "zip_integrity": "PASS",
+  "private_runtime_files": "ABSENT",
+  "user_pc_acceptance": "PENDING_USER_TEST"
+}

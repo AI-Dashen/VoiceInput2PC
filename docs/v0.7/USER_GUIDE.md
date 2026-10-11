@@ -28,3 +28,7 @@ Windows更新代码在“万能输入法-v0.7-Windows接收端源码.zip”。�
 
 ## 验收安排
 用户决定自行做最终验收，不再自动开关手机软件。已停止界面自动测试。手机输入法实际行为、真实电脑输入、窗口切换、跨网络及Windows GUI需用户实测。本说明不是验收通过声明。
+
+## 后续完成：Windows成品已生成
+
+原Windows构建阻塞已由GitHub Actions解决。run 38159766736在windows-latest成功；99项测试执行，2项跳过，其余通过；构建脚本的版本/包结构与Windows启动检查成功。成品下载并回读核对SHA256，文件Download/VoiceInput2PC-v07/万能输入法-Windows-v0.7.0.zip（32525156字节）。无需用户自行编译，完整解压并运行VoiceInput2PCReceiver.exe；保持_internal目录。此结果不替代用户实际电脑的最终验收。代码已由用户最新GitHub授权commit/push，旧“不commit/push”记录为历史状态。
