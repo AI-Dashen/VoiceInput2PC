@@ -41,6 +41,9 @@ public class MainActivity extends Activity {
     private boolean scannerReturnToTyping;
     private RelayTransport receiveQueueClient;
     private CommitTracker tracker;
+    private InputEventJournal inputJournal;
+    private String journalSessionId;
+    private int journalRevision;
     private String host, receiveQueueHost, legacyPendingRaw = "";
     private boolean busy, loading, destroyed, resumed, storageBlocked, sendingText, receiveQueued;
     private boolean fileTransferSupported;
@@ -69,6 +72,8 @@ public class MainActivity extends Activity {
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
         prefs = getSharedPreferences("voiceinput2pc", MODE_PRIVATE);
+        inputJournal = new InputEventJournal(this);
+        journalSessionId = UUID.randomUUID().toString();
         scannerReturnToTyping = savedInstanceState != null && savedInstanceState.getBoolean("scannerReturnToTyping", false);
         PairingConfig pairing = PairingStore.load(prefs);
         String incoming = incomingPairing(getIntent());
@@ -456,6 +461,17 @@ public class MainActivity extends Activity {
             storageBlocked = true; tracker.pause(); say("无法保存待确认文字，已暂停。",true); return false;
         }
     }
+    private void recordInputEvent(String type, String content, String messageId) {
+        if (inputJournal == null || journalSessionId == null) return;
+        try {
+            inputJournal.append(UUID.randomUUID().toString(), journalSessionId,
+                System.currentTimeMillis(), type, content, Build.MODEL, host,
+                messageId, ++journalRevision);
+        } catch (RuntimeException error) {
+            // Journal errors must be visible; never report a successful history write.
+            if (status != null) say("本地历史记录写入失败，请检查存储空间。", true);
+        }
+    }
     private JSONObject message(CommitTracker.Pending pending) throws Exception {
         return new JSONObject().put("id",pending.id).put("text",pending.text).put("session",pending.session);
     }
@@ -482,7 +498,8 @@ public class MainActivity extends Activity {
         if (editor.wasConnectionInterrupted()) {
             pauseLocal(); say("输入法在确认文字前断开，已暂停。请核对草稿后重新开始。",true);
         }
-        save(); updateControls(); handler.removeCallbacks(flush);
+        if (save()) recordInputEvent("draft_revision", editor.getText().toString(), null);
+        updateControls(); handler.removeCallbacks(flush);
         if (tracker.hasConflict()) {
             say("已修改已输入或待确认的前缀，已暂停。电脑原文不会删除；请核对后重置。",true);
         } else if (resumed && tracker.isActive() && !busy) {
@@ -571,6 +588,7 @@ public class MainActivity extends Activity {
                         && tracker.receipt((String)id,Boolean.TRUE.equals(result.opt("ok")),(String)resultStatus);
                     if (!valid) { clearQueuedReceive(); pauseLocal(); save(); uncertainHint(); return; }
                     if (!save()) { clearQueuedReceive(); updateControls(); return; }
+                    recordInputEvent("delivery_" + resultStatus, pending.snapshot, pending.id);
                     RelayTransport queuedClient = receiveQueueClient;
                     String queuedHost = receiveQueueHost;
                     boolean runQueuedReceive = queuedReceiveIsCurrent() && tracker.pending() == null
@@ -876,6 +894,8 @@ public class MainActivity extends Activity {
         super.onPause();
     }
     @Override public void onDestroy() {
-        destroyed=true; clearQueuedReceive(); handler.removeCallbacksAndMessages(null); worker.shutdown(); super.onDestroy();
+        destroyed=true; clearQueuedReceive(); handler.removeCallbacksAndMessages(null); worker.shutdown();
+        if (inputJournal != null) inputJournal.close();
+        super.onDestroy();
     }
 }
