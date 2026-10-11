@@ -1,3 +1,11 @@
+# 万能输入法 v0.7 本地开发版
+
+本工作树基于 v0.6.1，Android 安装包为 0.7.0-testing（code 8）。此次未发布 GitHub Release，旧 Release 不代表本版。完整使用方式及交付状态见 [v0.7 使用说明](docs/v0.7/USER_GUIDE.md) 与 [功能交付清单](docs/v0.7/FEATURE_DELIVERY.md)。
+
+手机主编辑区、历史查询/四格式导出、多电脑选择、同消息安全重连、Windows 当前焦点与历史窗口均已实现代码。Android APK 已构建；用户最终真机验收待进行。Windows 更新源码已交付，但尚未在 Windows 生成本版 EXE，不能将旧 EXE 视为包含新功能。
+
+---
+
 # VoiceInput2PC｜手机语音输入电脑
 
 > **把安卓手机里你已经习惯的语音输入法，直接变成 Windows 的语音输入终端：同一 Wi‑Fi 可以直连，不在同一网络也可以安全连接。**

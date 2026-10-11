@@ -63,7 +63,7 @@ def make_server(address, relay, token, certificate=None, private_key=None, file_
                         'app': 'VoiceInput2PC',
                         'paused': relay.paused,
                         'protocol': 2,
-                        'features': ['file-upload-v1'] if file_manager is not None else [],
+                        'features': ['ordered-text-v1', 'current-focus-v1'] + (['file-upload-v1'] if file_manager is not None else []),
                         'lan_hosts': detect_private_addresses(),
                     })
                 elif self.path == '/outbox':

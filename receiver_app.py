@@ -11,11 +11,12 @@ import datetime
 import sqlite3
 import sys
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from pathlib import Path
 import pystray
 from PIL import Image, ImageDraw
 from receiver.core import Relay, InvalidMessage
+from receiver.history_browser import HistoryBrowser
 from receiver.http_server import make_server
 from receiver.file_transfer import FileTransferManager
 from receiver.first_run import run_first_setup, show_pairing
@@ -24,17 +25,17 @@ from receiver.tailcat import get_or_start, stop_all, set_remote_enabled, Tailcat
 from receiver.win_input import type_text, capture_target, copy_text
 
 
-APP_VERSION = '0.5.0'
-APP_TITLE = '语音输入电脑 · 电脑接收端'
-FIRST_RUN_TITLE = '语音输入电脑 · 首次设置'
-PAIRING_TITLE = '语音输入电脑 · 配对手机'
+APP_VERSION = '0.7.0'
+APP_TITLE = '万能输入法 · 电脑接收端'
+FIRST_RUN_TITLE = '万能输入法 · 首次设置'
+PAIRING_TITLE = '万能输入法 · 配对手机'
 ERROR_ALREADY_EXISTS = 183
 SW_RESTORE = 9
 
 
 def read_history(relay):
     try:
-        return relay.recent(), ''
+        return relay.history()['items'], ''
     except (sqlite3.Error, OSError):
         return None, '暂时无法读取历史记录；仍可在托盘暂停或退出，稍后重试'
 
@@ -167,8 +168,8 @@ def main():
     root = tk.Tk()
     root.withdraw()
     root.title(APP_TITLE)
-    root.geometry('760x620')
-    root.minsize(640, 500)
+    root.geometry('900x780')
+    root.minsize(820, 700)
     root.protocol('WM_DELETE_WINDOW', root.withdraw)
     stage, port = '读取配置', None
     first_setup = False
@@ -196,7 +197,7 @@ def main():
                 'stage': stage, 'detail': detail}, ensure_ascii=False), encoding='utf-8')
         except OSError:
             pass
-        messagebox.showerror('语音输入电脑', detail)
+        messagebox.showerror('万能输入法', detail)
         root.destroy()
         kernel.CloseHandle(mutex)
         return
@@ -210,14 +211,14 @@ def main():
     for y in (25, 34):
         for x in (19, 29, 39):
             draw.rectangle((x, y, x+4, y+3), fill='white')
-    icon = pystray.Icon('VoiceInput2PC', image, '语音输入电脑 · 正在接收文字', menu=pystray.Menu(
-        pystray.MenuItem('查看状态和最近文字', lambda *_: commands.put('show'), default=True),
+    icon = pystray.Icon('VoiceInput2PC', image, '万能输入法 · 正在接收文字', menu=pystray.Menu(
+        pystray.MenuItem('查看状态和历史文字', lambda *_: commands.put('show'), default=True),
         pystray.MenuItem('暂停自动输入', lambda *_: commands.put('pause'), checked=lambda _: relay.paused),
         pystray.MenuItem('退出', lambda *_: commands.put('exit'))))
 
     container = ttk.Frame(root, padding=18)
     container.pack(fill='both', expand=True)
-    ttk.Label(container, text='语音输入电脑', font=('Microsoft YaHei UI', 20, 'bold')).pack(anchor='w')
+    ttk.Label(container, text='万能输入法', font=('Microsoft YaHei UI', 20, 'bold')).pack(anchor='w')
     status = ttk.Label(container, text='正在接收 · 手机可通过局域网或跨网络安全连接')
     status.pack(anchor='w', pady=(6, 4))
     network_row = ttk.Frame(container)
@@ -230,8 +231,28 @@ def main():
                                     values=(automatic_label, local_label), width=38)
     network_selector.pack(side='left', padx=10)
     ttk.Label(container, text='电脑点中输入位置 → 手机开始输入 → 使用手机输入法的语音按钮。').pack(anchor='w')
-    ttk.Label(container, text='无需逐条发送；不按回车、不改剪贴板。切换输入位置前请先暂停。').pack(anchor='w')
-    ttk.Label(container, text='最近收到的文字（仅保存在本机，显示最近 100 条）').pack(anchor='w', pady=(20, 5))
+    ttk.Label(container, text='无需逐条发送；文字输入到电脑当前光标，不按回车、不改剪贴板。').pack(anchor='w')
+    ttk.Label(container, text='全部历史（仅保存在本机，不自动删除；每页 100 条）').pack(anchor='w', pady=(14, 5))
+    browser = HistoryBrowser(relay)
+    keyword = tk.StringVar()
+    since = tk.StringVar()
+    until = tk.StringVar()
+    query_row = ttk.Frame(container)
+    query_row.pack(fill='x', pady=4)
+    ttk.Label(query_row, text='关键词').pack(side='left')
+    keyword_entry = ttk.Entry(query_row, textvariable=keyword)
+    keyword_entry.pack(side='left', fill='x', expand=True, padx=8)
+    ttk.Button(query_row, text='查询', command=lambda: query_history()).pack(side='left')
+    ttk.Button(query_row, text='全部历史', command=lambda: reset_history()).pack(side='left', padx=8)
+    time_row = ttk.Frame(container)
+    time_row.pack(fill='x', pady=4)
+    ttk.Label(time_row, text='开始时间').pack(side='left')
+    since_entry = ttk.Entry(time_row, textvariable=since, width=22)
+    since_entry.pack(side='left', padx=8)
+    ttk.Label(time_row, text='结束时间').pack(side='left')
+    until_entry = ttk.Entry(time_row, textvariable=until, width=22)
+    until_entry.pack(side='left', padx=8)
+    ttk.Label(container, text='本地时间：YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS；留空不限，结束日期包含当天。').pack(anchor='w')
     ttk.Label(container, text='拖动列表与文字框之间的分隔线，可单独调整文字区域高度。').pack(anchor='w')
     panes, listing, preview = create_history_panes(container)
     panes.pack(fill='both', expand=True, pady=8)
@@ -244,22 +265,87 @@ def main():
                   side='left', fill='x', expand=True, padx=10)
     rows = []
 
-    def refresh():
+    page_row = ttk.Frame(container)
+    page_row.pack(fill='x', pady=(0, 6))
+    previous_page = ttk.Button(page_row, text='上一页', command=lambda: turn_page(-1))
+    previous_page.pack(side='left')
+    next_page = ttk.Button(page_row, text='下一页', command=lambda: turn_page(1))
+    next_page.pack(side='left', padx=8)
+    page_note = ttk.Label(page_row)
+    page_note.pack(side='left')
+    export_format = tk.StringVar(value='TXT')
+    ttk.Button(page_row, text='导出查询结果', command=lambda: export_history()).pack(side='right')
+    ttk.Combobox(page_row, state='readonly', textvariable=export_format,
+                 values=('TXT', 'MD', 'JSON', 'CSV'), width=7).pack(side='right', padx=8)
+
+    def render_history(snapshot):
         nonlocal rows
-        snapshot, error = read_history(relay)
-        if snapshot is None:
-            status.config(text=error)
-            return
-        rows = snapshot
+        selected = listing.curselection()
+        selected_id = rows[selected[0]]['id'] if selected and selected[0] < len(rows) else None
+        rows = snapshot['items']
         listing.delete(0, 'end')
         for row in rows:
-            prefix = '已发送' if row['status'] == 'inserted' else '仅保存'
-            listing.insert('end', prefix + '  ' + row['text'].replace('\n', ' ')[:65])
+            prefix = '已输入' if row['status'] == 'inserted' else '仅保存'
+            stamp = datetime.datetime.fromtimestamp(row['created']).strftime('%Y-%m-%d %H:%M:%S')
+            listing.insert('end', stamp + '  ' + prefix + '  ' + row['text'].replace('\n', ' ')[:65])
         if rows:
-            listing.selection_set(0)
-            select()
+            index = next((i for i, row in enumerate(rows) if row['id'] == selected_id), 0)
+            listing.selection_set(index)
+        select()
+        total = snapshot['total']
+        pages = max(1, (total + browser.page_size - 1) // browser.page_size)
+        page_note.config(text=f'第 {browser.offset // browser.page_size + 1} / {pages} 页 · 共 {total} 条')
+        previous_page.config(state='normal' if browser.offset else 'disabled')
+        next_page.config(state='normal' if browser.offset + browser.page_size < total else 'disabled')
         connection_note = '局域网优先 · 跨网络备用已启用' if remote_enabled.get() else '仅局域网 · 跨网络备用已关闭'
         status.config(text=('已暂停自动输入 · ' if relay.paused else '正在接收 · ') + connection_note)
+
+    def run_history(action):
+        try:
+            render_history(action())
+            return True
+        except ValueError as exc:
+            messagebox.showerror('历史查询', str(exc), parent=root)
+        except (sqlite3.Error, OSError):
+            status.config(text='暂时无法读取历史记录，请稍后刷新重试')
+        return False
+
+    def refresh():
+        return run_history(browser.refresh)
+
+    def query_history():
+        return run_history(lambda: browser.query(keyword.get(), since.get(), until.get()))
+
+    def reset_history():
+        keyword.set('')
+        since.set('')
+        until.set('')
+        query_history()
+
+    def turn_page(direction):
+        run_history(lambda: browser.move(direction))
+
+    def export_history():
+        # Apply the visible query first: export never silently ignores edited filters.
+        if not query_history():
+            return
+        format = export_format.get().lower()
+        destination = filedialog.asksaveasfilename(
+            parent=root, title='导出全部查询结果',
+            initialfile='万能输入法-历史-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + '.' + format,
+            defaultextension='.' + format,
+            filetypes=[(format.upper() + ' 文件', '*.' + format)])
+        if not destination:
+            return
+        try:
+            count = browser.export(destination, format)
+        except (sqlite3.Error, OSError, ValueError):
+            messagebox.showerror('历史导出', '导出未完成，原目标文件保持不变；请检查保存位置后重试。', parent=root)
+            return
+        status.config(text=f'已导出 {count} 条历史到 {destination}')
+
+    for entry in (keyword_entry, since_entry, until_entry):
+        entry.bind('<Return>', lambda _event: query_history())
 
     def select(*_):
         sel = listing.curselection()
@@ -305,7 +391,7 @@ def main():
         except Exception as exc:
             detail = startup_error_message(exc, '更换配对码', folder, port)
             status.config(text='更换配对码失败，请退出后重新打开接收端')
-            messagebox.showerror('语音输入电脑', detail, parent=root)
+            messagebox.showerror('万能输入法', detail, parent=root)
             return
         finally:
             relay.paused = previous_pause
@@ -319,7 +405,7 @@ def main():
                          on_regenerate=regenerate_pairing, remote_enabled=remote_enabled.get())
         except RuntimeError as exc:
             messagebox.showerror(
-                '语音输入电脑',
+                '万能输入法',
                 '暂时无法生成自动配对码：' + str(exc)
                 + '\n\n电脑接收端仍在运行，局域网输入不受影响。',
                 parent=root)

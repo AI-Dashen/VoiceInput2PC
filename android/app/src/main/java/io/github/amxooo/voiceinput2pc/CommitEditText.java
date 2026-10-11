@@ -36,8 +36,10 @@ public final class CommitEditText extends EditText {
     @Override public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
         InputConnection original = super.onCreateInputConnection(outAttrs);
         if (original == null) return null;
-        connectionInterrupted = false;
+        connectionInterrupted = connection != null && (connection.composingExpected
+                || connection.batchDepth > 0 || connection.operationDepth > 0 || hasComposition());
         connection = new ObservedConnection(original);
+        if(connectionInterrupted)changed();
         return connection;
     }
     private final class ObservedConnection extends InputConnectionWrapper {
@@ -49,6 +51,7 @@ public final class CommitEditText extends EditText {
                 if (connection == this) changed();
             }
             @Override public void closeConnection() {
+                if (connection != this) return;
                 boolean unfinished = composingExpected || batchDepth > 0 || operationDepth > 0
                     || (connection == this && BaseInputConnection.getComposingSpanStart(getText()) >= 0);
                 operationDepth++;
@@ -57,6 +60,7 @@ public final class CommitEditText extends EditText {
                 finally { composingExpected = false; batchDepth = 0; endOperation(); }
             }
             @Override public boolean beginBatchEdit() {
+                if (connection != this) return false;
                 operationDepth++; batchDepth++;
                 try {
                     boolean result = super.beginBatchEdit();
@@ -65,56 +69,67 @@ public final class CommitEditText extends EditText {
                 } finally { endOperation(); }
             }
             @Override public boolean endBatchEdit() {
+                if (connection != this) return false;
                 operationDepth++;
                 try { return super.endBatchEdit(); }
                 finally { if (batchDepth > 0) batchDepth--; endOperation(); }
             }
             @Override public boolean setComposingText(CharSequence text, int cursor) {
+                if (connection != this) return false;
                 operationDepth++; composingExpected = true;
                 try { return super.setComposingText(text, cursor); }
                 finally { endOperation(); }
             }
             @Override public boolean setComposingText(CharSequence text, int cursor, TextAttribute attribute) {
+                if (connection != this) return false;
                 operationDepth++; composingExpected = true;
                 try { return super.setComposingText(text, cursor, attribute); }
                 finally { endOperation(); }
             }
             @Override public boolean setComposingRegion(int start, int end) {
+                if (connection != this) return false;
                 operationDepth++; composingExpected = start != end;
                 try { return super.setComposingRegion(start, end); }
                 finally { endOperation(); }
             }
             @Override public boolean setComposingRegion(int start, int end, TextAttribute attribute) {
+                if (connection != this) return false;
                 operationDepth++; composingExpected = start != end;
                 try { return super.setComposingRegion(start, end, attribute); }
                 finally { endOperation(); }
             }
             @Override public boolean commitText(CharSequence text, int cursor) {
+                if (connection != this) return false;
                 operationDepth++;
                 try { return super.commitText(text, cursor); }
                 finally { composingExpected = false; endOperation(); }
             }
             @Override public boolean commitText(CharSequence text, int cursor, TextAttribute attribute) {
+                if (connection != this) return false;
                 operationDepth++;
                 try { return super.commitText(text, cursor, attribute); }
                 finally { composingExpected = false; endOperation(); }
             }
             @Override public boolean finishComposingText() {
+                if (connection != this) return false;
                 operationDepth++;
                 try { return super.finishComposingText(); }
                 finally { composingExpected = false; endOperation(); }
             }
             @Override public boolean deleteSurroundingText(int before, int after) {
+                if (connection != this) return false;
                 operationDepth++;
                 try { return super.deleteSurroundingText(before, after); }
                 finally { endOperation(); }
             }
             @Override public boolean deleteSurroundingTextInCodePoints(int before, int after) {
+                if (connection != this) return false;
                 operationDepth++;
                 try { return super.deleteSurroundingTextInCodePoints(before, after); }
                 finally { endOperation(); }
             }
             @Override public boolean sendKeyEvent(KeyEvent event) {
+                if (connection != this) return false;
                 operationDepth++;
                 try { return super.sendKeyEvent(event); }
                 finally { endOperation(); }

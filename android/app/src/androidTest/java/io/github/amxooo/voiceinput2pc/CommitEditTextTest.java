@@ -75,4 +75,18 @@ public final class CommitEditTextTest extends InstrumentationTestCase {
             assertEquals("新输入", pending.text);
         });
     }
+    public void testReplacedConnectionRejectsLateCommit() throws Throwable {
+        runTestOnUiThread(()-> {
+            CommitTracker tracker=new CommitTracker("","",null,false);
+            EditText text=editor(tracker);
+            InputConnection first=text.onCreateInputConnection(new EditorInfo());
+            first.setComposingText("尚未确认",1);
+            InputConnection current=text.onCreateInputConnection(new EditorInfo());
+            assertFalse(first.commitText("迟到旧识别",1));
+            assertEquals("尚未确认",text.getText().toString());
+            assertTrue(current.commitText("新识别",1));
+            assertEquals("新识别",text.getText().toString());
+        });
+    }
+
 }

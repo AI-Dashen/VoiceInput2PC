@@ -36,6 +36,19 @@ public class MainActivity extends Activity {
     private Button pairingButton;
     private EditText pairingInput;
     private SharedPreferences prefs;
+    private InputHistoryStore history;
+    private String historySession;
+    private String historySource = "phone_ime";
+    private HistoryScreen historyScreen;
+    private View inputRoot;
+    private boolean reconnecting, resumeAfterReconnect;
+    private int reconnectAttempt, reconnectEpoch;
+    private final Runnable reconnect = this::retryConnection;
+    private void retryConnection() {
+        if (!destroyed && resumed && reconnecting && reconnectEpoch == activationEpoch
+                && tracker != null && tracker.pending() != null && !busy)
+            dispatch(tracker.pending());
+    }
     private RelayTransport client;
     private PairingConfig currentPairing;
     private boolean scannerReturnToTyping;
@@ -49,6 +62,74 @@ public class MainActivity extends Activity {
     private final Runnable flush = this::transmitCommitted;
     private static final int PICK_FILE_REQUEST = 2606;
 
+    private final int paper = Color.rgb(246, 239, 230);
+    private final int brown = Color.rgb(117, 79, 42);
+    private GradientDrawable surface(int color, int border, int radius) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(color); d.setCornerRadius(dp(radius));
+        if (border != 0) d.setStroke(dp(1), border);
+        return d;
+    }
+    private void styleAction(Button b, boolean primary) {
+        b.setAllCaps(false); b.setTextSize(14); b.setMinWidth(0); b.setMinimumWidth(0);
+        b.setMinHeight(0); b.setMinimumHeight(0); b.setPadding(dp(8),0,dp(8),0);
+        b.setTextColor(primary ? Color.WHITE : brown);
+        b.setBackgroundTintList(null);
+        b.setBackground(surface(primary ? brown : Color.rgb(255,249,242),
+                primary ? 0 : Color.rgb(218,200,179),22));
+    }
+    private void showHistory() {
+        if (busy) { say("请等待当前请求完成后查看历史。", true); return; }
+        if (tracker != null) { pauseLocal(); if (!save()) return; }
+        final View retained = inputRoot;
+        if (historyScreen != null) historyScreen.destroy();
+        historyScreen = new HistoryScreen(this, history, () -> {
+            setContentView(retained);
+            if (tracker != null) {
+                updateControls(); say("已暂停 · 草稿已保留，点开始继续", false);
+            }
+        });
+        ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(
+                getWindow().getDecorView().getWindowToken(),0);
+        historyScreen.show();
+    }
+    private void showDevices() {
+        if (!canChangeConnection()) return;
+        java.util.List<PairingConfig> devices = PairingStore.list(prefs);
+        String[] names = new String[devices.size()+1];
+        for(int i=0;i<devices.size();i++) names[i]=PairingStore.label(prefs,devices.get(i))
+                + (devices.get(i).equals(currentPairing) ? " · 当前" : "");
+        names[names.length-1]="＋ 连接新电脑";
+        new AlertDialog.Builder(this).setTitle("选择电脑")
+            .setItems(names,(dialog,which)-> {
+                if(which==devices.size()) {
+                    scannerReturnToTyping=currentPairing!=null;
+                    showPairingScreen("扫描新电脑的配对码，草稿已保留。");
+                } else {
+                    PairingConfig selected=devices.get(which);
+                    if(!PairingStore.save(prefs,selected)){say("设备选择保存失败。",true);return;}
+                    showTypingScreen(selected);
+                }
+            }).setNegativeButton("关闭",null).show();
+    }
+    private void renameDevice() {
+        if(currentPairing==null || !canChangeConnection())return;
+        EditText name=new EditText(this);
+        name.setSingleLine(true);name.setText(PairingStore.label(prefs,currentPairing));
+        new AlertDialog.Builder(this).setTitle("电脑名称").setView(name)
+            .setNegativeButton("取消",null).setPositiveButton("保存",(d,w)-> {
+                if(PairingStore.rename(prefs,currentPairing,name.getText().toString().trim()))
+                    destination.setText(PairingStore.label(prefs,currentPairing)+"  ▾");
+                else say("名称需为1到40个字符，且能保存。",true);
+            }).show();
+    }
+    @Override public void onBackPressed() {
+        if(historyScreen!=null && historyScreen.onBackPressed())return;
+        if(scannerReturnToTyping && currentPairing!=null && !busy){
+            scannerReturnToTyping=false;showTypingScreen(currentPairing);return;
+        }
+        super.onBackPressed();
+    }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private TextView label(String text, int size, int color) {
         TextView view = new TextView(this);
@@ -69,6 +150,12 @@ public class MainActivity extends Activity {
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
         prefs = getSharedPreferences("voiceinput2pc", MODE_PRIVATE);
+        history = new InputHistoryStore(this);
+        historySession = prefs.getString("historySession", "");
+        if (historySession.isEmpty()) {
+            historySession = UUID.randomUUID().toString();
+            if (!prefs.edit().putString("historySession", historySession).commit()) storageBlocked = true;
+        }
         scannerReturnToTyping = savedInstanceState != null && savedInstanceState.getBoolean("scannerReturnToTyping", false);
         PairingConfig pairing = PairingStore.load(prefs);
         String incoming = incomingPairing(getIntent());
@@ -81,10 +168,15 @@ public class MainActivity extends Activity {
         } else {
             showTypingScreen(pairing);
         }
+        if (savedInstanceState != null && savedInstanceState.getBoolean("history_visible",false)) {
+            showHistory(); historyScreen.restoreState(savedInstanceState); historyScreen.show();
+        }
     }
 
     @Override protected void onSaveInstanceState(Bundle outState) {
         outState.putBoolean("scannerReturnToTyping", scannerReturnToTyping);
+        outState.putBoolean("history_visible",historyScreen!=null && historyScreen.isVisible());
+        if(historyScreen!=null)historyScreen.saveState(outState);
         super.onSaveInstanceState(outState);
     }
 
@@ -113,23 +205,23 @@ public class MainActivity extends Activity {
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         applyScreenInsets(layout);
-        layout.setBackgroundColor(Color.rgb(247,248,244));
-        TextView title = label("连接电脑", 22, Color.rgb(31,48,43));
+        layout.setBackgroundColor(paper);
+        TextView title = label("万能输入法", 22, Color.rgb(45,39,32));
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         layout.addView(title, row(-2));
-        TextView guide = label("在电脑接收端点击“配对手机”，点击下方“扫码连接”；也可以粘贴完整配对码。",
+        TextView guide = label("连接电脑后，在手机写字或使用当前输入法说话。文字会进入电脑当前光标，完整历史保存在手机。",
                 15, Color.DKGRAY);
         guide.setPadding(0, dp(10), 0, dp(16));
         layout.addView(guide, row(-2));
         Button scan = new Button(this);
         scan.setId(1002); scan.setText("扫码连接");
         scan.setOnClickListener(v -> launchScanner());
-        layout.addView(scan, row(48));
+        styleAction(scan,true); layout.addView(scan, row(44));
         pairingInput = new EditText(this);
         pairingInput.setHint("粘贴 voiceinput2pc:// 开头的完整配对码");
         pairingInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE
                 | InputType.TYPE_TEXT_VARIATION_URI);
-        pairingInput.setMinLines(4);
+        pairingInput.setMinLines(3);
         pairingInput.setGravity(android.view.Gravity.TOP | android.view.Gravity.START);
         layout.addView(pairingInput, new LinearLayout.LayoutParams(-1, 0, 1));
         status = label(message, 14, green);
@@ -140,12 +232,16 @@ public class MainActivity extends Activity {
         pairingButton.setTextColor(Color.WHITE);
         pairingButton.setBackgroundTintList(ColorStateList.valueOf(green));
         pairingButton.setOnClickListener(v -> importPairing(pairingInput.getText().toString().trim()));
-        layout.addView(pairingButton, row(48));
+        styleAction(pairingButton,true);layout.addView(pairingButton, row(44));
+        Button paired = new Button(this);paired.setText("已配对电脑");styleAction(paired,false);
+        paired.setOnClickListener(v->showDevices());layout.addView(paired,row(40));
+        Button records = new Button(this);records.setId(1004);records.setText("输入历史");
+        styleAction(records,false);records.setOnClickListener(v->showHistory());layout.addView(records,row(40));
         TextView safety = label("配对码相当于连接密码，只在自己的手机和电脑之间使用。仅扫码时申请相机权限，不需要麦克风权限。",
                 12, Color.GRAY);
         safety.setPadding(0, dp(12), 0, 0);
         layout.addView(safety, row(-2));
-        setContentView(layout);
+        inputRoot=layout;setContentView(layout);
     }
 
     private void applyScreenInsets(LinearLayout layout) {
@@ -183,27 +279,23 @@ public class MainActivity extends Activity {
     }
 
     private void showMore() {
-        String[] items = {"扫码连接电脑", "发送文件到电脑", "连接方式", "连接诊断", "重新探测局域网", "使用说明"};
+        String[] items = {"输入历史", "选择电脑", "电脑名称", "发送文件到电脑",
+                "连接方式", "连接诊断", "核对并恢复输入", "使用说明"};
         new AlertDialog.Builder(this).setTitle("更多")
-                .setItems(items, (dialog, which) -> {
-                    if (which == 0) {
-                        if (!canChangeConnection()) return;
-                        scannerReturnToTyping = true;
-                        showPairingScreen("扫描电脑接收端的配对二维码。");
-                        launchScanner();
-                    } else if (which == 1) {
-                        if (sendFile.isEnabled()) sendFile.performClick();
-                        else say("当前暂不能发送文件，请确认电脑连接和版本。", true);
-                    } else if (which == 2) showConnectionModes();
-                    else if (which == 3) showConnectionDiagnostics();
-                    else if (which == 4) {
-                        if (!canChangeConnection()) return;
-                        try { client = createTransport(currentPairing); health(); }
-                        catch (Exception failure) { say(pairingFailureText(failure), true); }
-                    } else new AlertDialog.Builder(this).setTitle("使用说明")
-                            .setMessage("先选中电脑输入框，再点开始。使用输入法麦克风输入，确认文字后自动发送。切到后台会暂停。文件单个不超过 200MB，保存到电脑 Downloads/VoiceInput2PC。")
-                            .setPositiveButton("知道了", null).show();
-                }).show();
+            .setItems(items,(dialog,which)-> {
+                if(which==0)showHistory();
+                else if(which==1)showDevices();
+                else if(which==2)renameDevice();
+                else if(which==3){
+                    if(sendFile.isEnabled())sendFile.performClick();
+                    else say("当前暂不能发送文件，请核对电脑连接和版本。",true);
+                } else if(which==4)showConnectionModes();
+                else if(which==5)showConnectionDiagnostics();
+                else if(which==6)newDraft();
+                else new AlertDialog.Builder(this).setTitle("持续输入")
+                    .setMessage("在电脑选中输入框，点开始，然后一直写或说。使用你当前输入法的麦克风，无需新建段落。电脑窗口切换后，新文字进入当前光标。临时识别文字不会发送；已输入文字被改动时先核对，电脑原文不会自动删除。后台、历史页或不确定回执会暂停，草稿和历史保留。")
+                    .setPositiveButton("知道了",null).show();
+            }).show();
     }
 
     private void showConnectionModes() {
@@ -311,7 +403,7 @@ public class MainActivity extends Activity {
         currentPairing = pairing;
         clearQueuedReceive();
         fileTransferSupported = false;
-        setTitle("语音输入电脑");
+        setTitle("万能输入法");
         try {
             host = prefs.getString("host", pairing.host);
             client = createTransport(pairing);
@@ -328,7 +420,7 @@ public class MainActivity extends Activity {
             try {
                 JSONObject value = new JSONObject(old);
                 pending = new CommitTracker.Pending(value.getString("id"), snapshot,
-                    value.getString("text"), value.optString("session", ""));
+                    value.getString("text"), value.optString("session", ""), value.optLong("seq", 0));
             } catch (Exception invalid) {
                 legacyPendingRaw = old;
                 pending = new CommitTracker.Pending("legacy-unconfirmed", snapshot, draft, "");
@@ -339,60 +431,59 @@ public class MainActivity extends Activity {
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         applyScreenInsets(layout);
-        layout.setBackgroundColor(Color.rgb(247,248,244));
+        layout.setBackgroundColor(paper);
         LinearLayout heading = new LinearLayout(this);
         heading.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        TextView title = label("语音输入电脑",20,Color.rgb(31,48,43));
+        TextView title = label("万能输入法",20,Color.rgb(45,39,32));
         title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
-        Button more = new Button(this); more.setId(1003); more.setText("更多");
-        more.setOnClickListener(v -> showMore());
-        heading.addView(more, new LinearLayout.LayoutParams(dp(72), dp(48)));
+        Button more = new Button(this); more.setId(1004); more.setText("历史");styleAction(more,false);
+        more.setOnClickListener(v -> showHistory());
+        heading.addView(more, new LinearLayout.LayoutParams(dp(60), dp(36)));
         layout.addView(heading,row(-2));
-        destination = label(pairing.isAuto()
-                ? "这台电脑 · 自动连接 · 更换 ›"
-                : "电脑  " + host + "   · 更换 ›",13,Color.DKGRAY);
-        destination.setPadding(0,dp(2),0,dp(4));
-        destination.setOnClickListener(v -> {
-            if (busy || tracker.pending() != null) {
-                say("请先处理待确认文字，再更换电脑。", true);
-                return;
-            }
-            pauseLocal(); save();
-            showPairingScreen("请扫描新电脑接收端显示的二维码。");
-        });
-        layout.addView(destination,row(-2));
-        status = label("已暂停 · 先选中电脑输入框，再点开始",14,green);
+        destination = label(PairingStore.label(prefs,pairing)+"  ▾",14,Color.rgb(59,46,32));
+        destination.setPadding(dp(12),dp(9),dp(12),dp(9));
+        destination.setBackground(surface(Color.rgb(232,217,201),0,12));
+        destination.setOnClickListener(v -> showDevices());
+        LinearLayout.LayoutParams deviceParams=row(-2);deviceParams.topMargin=dp(10);deviceParams.bottomMargin=dp(8);
+        layout.addView(destination,deviceParams);
+        status = label("已暂停 · 文字只保存在本机",13,green);
+        status.setPadding(dp(2),0,dp(2),dp(8));
         layout.addView(status,row(-2));
         editor = new CommitEditText(this);
         editor.setId(1001); editor.setSaveEnabled(false);
-        editor.setTextSize(19); editor.setTextColor(Color.rgb(30,39,35));
+        editor.setTextSize(20); editor.setTextColor(Color.rgb(30,39,35));
         editor.setGravity(android.view.Gravity.TOP | android.view.Gravity.START);
-        editor.setHint("点开始后，用输入法的麦克风说话。已确认文字会自动输入电脑。");
+        editor.setHint("在这里写字，或用输入法麦克风说话…\n\n点开始后，确认的文字会持续输入电脑当前光标。");
         editor.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         editor.setImeOptions(EditorInfo.IME_FLAG_NO_EXTRACT_UI | EditorInfo.IME_ACTION_NONE);
-        editor.setPadding(dp(10),dp(10),dp(10),dp(10)); editor.setMinLines(3);
+        editor.setPadding(dp(14),dp(14),dp(14),dp(14)); editor.setMinLines(3);
         GradientDrawable card = new GradientDrawable();
-        card.setColor(Color.WHITE); card.setCornerRadius(dp(14)); card.setStroke(dp(1),Color.rgb(215,224,217));
+        card.setColor(Color.rgb(255,252,247)); card.setCornerRadius(dp(14)); card.setStroke(dp(1),Color.rgb(225,210,192));
         editor.setBackground(card);
         LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(-1,0,1);
         inputParams.topMargin=dp(6); inputParams.bottomMargin=dp(4);
         layout.addView(editor,inputParams);
         counter = label("",12,Color.GRAY); layout.addView(counter,row(-2));
         retry = new Button(this); retry.setText("重试确认（同一条）");
-        retry.setOnClickListener(v -> retryPending()); layout.addView(retry,row(-2));
+        styleAction(retry,false);retry.setOnClickListener(v -> retryPending()); layout.addView(retry,row(40));
         LinearLayout actions = new LinearLayout(this);
-        fresh = new Button(this); fresh.setText("新一段");
-        start = new Button(this); start.setText("开始输入到电脑");
-        receive = new Button(this); receive.setText("接收");
-        start.setTextColor(Color.WHITE); start.setBackgroundTintList(ColorStateList.valueOf(green));
-        actions.addView(fresh,new LinearLayout.LayoutParams(0,dp(48),1));
-        LinearLayout.LayoutParams startParams = new LinearLayout.LayoutParams(0,dp(48),2);
-        startParams.leftMargin=dp(8); actions.addView(start,startParams);
-        LinearLayout.LayoutParams receiveParams = new LinearLayout.LayoutParams(0,dp(48),1);
-        receiveParams.leftMargin=dp(8); actions.addView(receive,receiveParams); layout.addView(actions,row(-2));
+        fresh = new Button(this);fresh.setText("核对后恢复");styleAction(fresh,false);
+        layout.addView(fresh,row(40));
+        start = new Button(this);start.setText("开始输入");styleAction(start,false);
+        receive = new Button(this);receive.setText("接收");styleAction(receive,true);
+        Button options = new Button(this);options.setId(1003);options.setText("•••");styleAction(options,false);
+        options.setOnClickListener(v->showMore());
+        actions.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        actions.addView(start,new LinearLayout.LayoutParams(0,dp(44),2));
+        LinearLayout.LayoutParams receiveParams=new LinearLayout.LayoutParams(0,dp(44),1);
+        receiveParams.leftMargin=dp(8);actions.addView(receive,receiveParams);
+        LinearLayout.LayoutParams optionParams=new LinearLayout.LayoutParams(dp(48),dp(44));
+        optionParams.leftMargin=dp(8);actions.addView(options,optionParams);
+        LinearLayout.LayoutParams actionParams=row(-2);actionParams.topMargin=dp(7);
+        layout.addView(actions,actionParams);
         sendFile = new Button(this); sendFile.setText("发送文件到电脑");
-        setContentView(layout);
+        inputRoot=layout;setContentView(layout);
         loading=true; editor.setText(draft); editor.setSelection(editor.length()); loading=false;
         editor.setEditObserver(this::edited);
         start.setOnClickListener(v -> toggleStart()); fresh.setOnClickListener(v -> newDraft());
@@ -443,12 +534,18 @@ public class MainActivity extends Activity {
         if (destroyed || tracker == null) return false;
         CommitTracker.Pending pending = tracker.pending();
         try {
+            if (!editor.hasComposition() && !editor.hasOpenEdit()) {
+                String state = pending != null ? "QUEUED" : tracker.hasConflict() ? "EDIT_CONFLICT"
+                    : tracker.isSaved() ? "SAVED_NOT_INSERTED" : tracker.isActive() ? "ACTIVE" : "PAUSED";
+                history.record(historySession, historySource, currentPairing.deviceId, state,
+                    pending == null ? "" : pending.id, pending == null ? 0 : pending.seq, tracker.draft());
+            }
             String message = pending == null ? "" : message(pending).toString();
             boolean stored = prefs.edit().putInt("schema",2).putString("host",host)
                 .putString("draft",tracker.draft()).putString("sent",tracker.sent())
                 .putString("pending",message).putString("pendingSnapshot",pending == null ? "" : pending.snapshot)
                 .putBoolean("savedOnly",tracker.isSaved()).putString("legacyPendingRaw",legacyPendingRaw)
-                .putBoolean("auto",false).commit();
+                .putBoolean("auto",false).putString("historySession",historySession).commit();
             storageBlocked = !stored;
             if (!stored) { tracker.pause(); say("无法保存草稿，已暂停。请检查手机存储空间后重试。",true); }
             return stored;
@@ -457,14 +554,17 @@ public class MainActivity extends Activity {
         }
     }
     private JSONObject message(CommitTracker.Pending pending) throws Exception {
-        return new JSONObject().put("id",pending.id).put("text",pending.text).put("session",pending.session);
+        JSONObject value = new JSONObject().put("id",pending.id).put("text",pending.text).put("session",pending.session);
+        if (pending.seq > 0) value.put("seq", pending.seq);
+        return value;
     }
     private void updateControls() {
         if (destroyed || tracker == null) return;
-        start.setText(tracker.isActive() ? "暂停输入" : "开始输入到电脑");
-        start.setEnabled(tracker.isActive() || (!busy && !storageBlocked && tracker.pending() == null && !tracker.isSaved() && !tracker.hasConflict()));
+        start.setText(reconnecting ? "停止重连" : tracker.isActive() ? "暂停输入" : "开始输入");
+        start.setEnabled(reconnecting || tracker.isActive() || (!busy && !storageBlocked && tracker.pending() == null && !tracker.isSaved() && !tracker.hasConflict()));
         fresh.setEnabled(!busy);
-        fresh.setText(tracker.pending() != null || tracker.isSaved() || tracker.hasConflict() ? "保留并重置" : "新一段");
+        fresh.setText("核对后恢复");
+        fresh.setVisibility(tracker.pending()!=null || tracker.isSaved() || tracker.hasConflict() ? View.VISIBLE : View.GONE);
         boolean cleanForReceive = !storageBlocked && !tracker.isSaved() && !tracker.hasConflict();
         receive.setEnabled((!busy && cleanForReceive && tracker.pending() == null)
             || (sendingText && !receiveQueued && cleanForReceive && tracker.pending() != null));
@@ -478,6 +578,7 @@ public class MainActivity extends Activity {
     }
     private void edited() {
         if (loading || destroyed) return;
+        historySource = "phone_ime";
         tracker.observe(editor.getText().toString(),editor.hasComposition(),editor.hasOpenEdit());
         if (editor.wasConnectionInterrupted()) {
             pauseLocal(); say("输入法在确认文字前断开，已暂停。请核对草稿后重新开始。",true);
@@ -491,7 +592,8 @@ public class MainActivity extends Activity {
         }
     }
     private void pauseLocal() {
-        activationEpoch++; tracker.pause(); handler.removeCallbacks(flush); updateControls();
+        activationEpoch++; tracker.pause(); handler.removeCallbacks(flush); handler.removeCallbacks(reconnect);
+        reconnecting=false;resumeAfterReconnect=false;reconnectAttempt=0;updateControls();
     }
     private void toggleStart() {
         if (destroyed || !resumed) return;
@@ -523,7 +625,9 @@ public class MainActivity extends Activity {
                     Object session = result.opt("session");
                     if (!Boolean.TRUE.equals(result.opt("ok")) || !(session instanceof String) || ((String)session).isEmpty()) {
                         say(result.optString("note","电脑未建立输入会话，请检查接收端版本和目标输入框。"),true);
-                    } else if (tracker.start((String)session)) {
+                    } else if (result.has("next_seq")
+                            ? tracker.startOrdered((String)session, result.optLong("next_seq", -1))
+                            : tracker.start((String)session)) {
                         say("正在输入 · 用手机输入法麦克风说话，确认文字后自动输入电脑",false);
                         editor.requestFocus(); editor.setSelection(editor.length());
                         ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).showSoftInput(editor,InputMethodManager.SHOW_IMPLICIT);
@@ -559,6 +663,7 @@ public class MainActivity extends Activity {
         try { body = message(pending); }
         catch (Exception e) { pauseLocal(); uncertainHint(); return; }
         final String address = host;
+        final int requestEpoch = activationEpoch;
         busy=true; sendingText=true; updateControls(); say("正在输入电脑…",false);
         worker.execute(() -> {
             try {
@@ -567,9 +672,29 @@ public class MainActivity extends Activity {
                     if (destroyed) return;
                     busy=false; sendingText=false;
                     Object id = result.opt("id"), resultStatus = result.opt("status");
-                    boolean valid = id instanceof String && resultStatus instanceof String
+                    CommitTracker.Pending awaiting = tracker.pending();
+                    boolean sequenceMatches = awaiting != null && (awaiting.seq == 0
+                        || result.opt("seq") instanceof Number && result.optLong("seq", -1) == awaiting.seq
+                        && result.optDouble("seq", -1) == awaiting.seq);
+                    boolean valid = sequenceMatches && id instanceof String && resultStatus instanceof String
                         && tracker.receipt((String)id,Boolean.TRUE.equals(result.opt("ok")),(String)resultStatus);
                     if (!valid) { clearQueuedReceive(); pauseLocal(); save(); uncertainHint(); return; }
+                    try { history.record(historySession, historySource, currentPairing.deviceId,
+                            "inserted".equals((String)resultStatus) ? "INSERTED" : "SAVED_NOT_INSERTED",
+                            awaiting.id, awaiting.seq, awaiting.snapshot); }
+                    catch (Exception storageFailure) {
+                        pauseLocal(); save(); storageBlocked = true; updateControls();
+                        say("电脑已返回结果，但历史保存失败。已暂停，请核对电脑，不要重复发送。", true); return;
+                    }
+                    boolean continueInput = reconnecting && resumeAfterReconnect && resumed
+                        && reconnectEpoch == activationEpoch && "inserted".equals(resultStatus)
+                        && !tracker.hasConflict() && !tracker.isSaved();
+                    reconnecting=false;resumeAfterReconnect=false;reconnectAttempt=0;
+                    handler.removeCallbacks(reconnect);
+                    if(continueInput) {
+                        if(awaiting.seq>0)tracker.startOrdered(awaiting.session,awaiting.seq+1);
+                        else tracker.start(awaiting.session);
+                    }
                     if (!save()) { clearQueuedReceive(); updateControls(); return; }
                     RelayTransport queuedClient = receiveQueueClient;
                     String queuedHost = receiveQueueHost;
@@ -592,7 +717,16 @@ public class MainActivity extends Activity {
             } catch (Exception e) {
                 handler.post(() -> {
                     if (destroyed) return;
-                    busy=false; sendingText=false; clearQueuedReceive(); pauseLocal(); save(); uncertainHint();
+                    busy=false;sendingText=false;clearQueuedReceive();
+                    boolean mayResume = reconnecting ? resumeAfterReconnect : tracker.isActive();
+                    int retries = reconnectAttempt;
+                    pauseLocal();save();
+                    if(resumed && requestEpoch == activationEpoch-1 && tracker.pending()!=null && !tracker.pending().session.isEmpty() && retries<2) {
+                        reconnecting=true;resumeAfterReconnect=mayResume;
+                        reconnectAttempt=retries+1;reconnectEpoch=activationEpoch;
+                        updateControls();say("连接中断 · 已保留本条，正在重连 "+reconnectAttempt+"/2",true);
+                        handler.postDelayed(reconnect,reconnectAttempt*1500L);
+                    } else uncertainHint();
                 });
             }
         });
@@ -653,6 +787,8 @@ public class MainActivity extends Activity {
                         updateControls(); say("电脑返回的文字格式不正确，原草稿已保留。",true); return;
                     }
                     String id=(String)itemId, text=(String)itemText;
+                    historySource="pc_clipboard";
+                    historySession=UUID.randomUUID().toString();
                     loading=true; tracker.reset(text); legacyPendingRaw="";
                     editor.setText(text); editor.setSelection(editor.length()); loading=false;
                     if (!save()) { updateControls(); return; }
@@ -721,6 +857,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if(historyScreen!=null && historyScreen.handleActivityResult(requestCode,resultCode,data))return;
         IntentResult scanned = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
         if (scanned != null) {
             if (scanned.getContents() != null) {
@@ -829,18 +966,20 @@ public class MainActivity extends Activity {
                 })
                 .setPositiveButton("电脑没有，保留",(d,w)->resetDraft(tracker.unsentForReset())).show();
         } else if (tracker.isSaved() || tracker.hasConflict() || !tracker.unsentForReset().isEmpty()) {
-            new AlertDialog.Builder(this).setTitle("保留文字，重新开始一段")
+            new AlertDialog.Builder(this).setTitle("核对后恢复输入")
                 .setMessage(tracker.hasConflict()
-                    ? "已输入部分被修改，电脑原文仍在。将保留整份草稿作为新一段；再次开始前请手动删去草稿中不需重复输入的部分。"
+                    ? "已输入部分被修改，电脑原文仍在。将保留整份修订稿；再次开始前请手动删去草稿中不需重复输入的部分。"
                     : "将保留尚未输入的文字并重置状态。核对电脑输入框后，需要再点开始才会输入。")
                 .setNegativeButton("取消",null).setPositiveButton("保留并重置",(d,w)->resetDraft(tracker.unsentForReset())).show();
         } else resetDraft("");
     }
     private void resetDraft(String retained) {
         if (destroyed || busy) return;
+        if(!save())return;
+        historySession=UUID.randomUUID().toString();historySource="phone_ime";
         loading=true; tracker.reset(retained); legacyPendingRaw="";
         editor.setText(retained); editor.setSelection(editor.length()); loading=false;
-        save(); updateControls(); say("已暂停，新一段已准备好。核对电脑输入框后再点开始。",false);
+        save(); updateControls(); say("修订已保留 · 核对电脑已有文字后，点开始继续。",false);
         editor.requestFocus();
     }
     private void health() {
@@ -876,6 +1015,7 @@ public class MainActivity extends Activity {
         super.onPause();
     }
     @Override public void onDestroy() {
+        if(historyScreen!=null)historyScreen.destroy();
         destroyed=true; clearQueuedReceive(); handler.removeCallbacksAndMessages(null); worker.shutdown(); super.onDestroy();
     }
 }

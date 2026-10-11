@@ -4,13 +4,18 @@ package io.github.amxooo.voiceinput2pc;
 public final class CommitTracker {
     public static final class Pending {
         public final String id, snapshot, text, session;
+        public final long seq;
         public Pending(String id, String snapshot, String text, String session) {
-            this.id = id; this.snapshot = snapshot; this.text = text; this.session = session;
+            this(id, snapshot, text, session, 0);
+        }
+        public Pending(String id, String snapshot, String text, String session, long seq) {
+            this.id = id; this.snapshot = snapshot; this.text = text; this.session = session; this.seq = seq;
         }
     }
 
     private String sent, draft, ready, session = "";
     private Pending pending;
+    private long nextSeq;
     private boolean active, conflict, saved;
 
     public CommitTracker(String sent, String draft, Pending pending, boolean saved) {
@@ -28,7 +33,12 @@ public final class CommitTracker {
 
     public boolean start(String newSession) {
         if (pending != null || saved || conflict || newSession == null || newSession.isEmpty()) return false;
-        session = newSession; active = true;
+        session = newSession; nextSeq = 0; active = true;
+        return true;
+    }
+    public boolean startOrdered(String newSession, long firstSeq) {
+        if (firstSeq < 1 || firstSeq > 9007199254740991L || !start(newSession)) return false;
+        nextSeq = firstSeq;
         return true;
     }
     public void pause() { active = false; session = ""; }
@@ -38,7 +48,7 @@ public final class CommitTracker {
         String suffix = ready.substring(sent.length());
         if (suffix.isEmpty() || suffix.codePointCount(0, suffix.length()) > 20000
                 || !validUnicode(suffix)) return null;
-        pending = new Pending(id, ready, normalize(suffix), session);
+        pending = new Pending(id, ready, normalize(suffix), session, nextSeq);
         return pending;
     }
 
@@ -48,6 +58,7 @@ public final class CommitTracker {
                 || !("inserted".equals(status) || "saved".equals(status))) return false;
         if ("inserted".equals(status)) {
             sent = pending.snapshot;
+            if (pending.seq > 0) nextSeq = pending.seq + 1;
             if (!draft.startsWith(sent)) { conflict = true; pause(); }
         } else { saved = true; pause(); }
         pending = null;

@@ -72,12 +72,15 @@ public final class MainActivityTest extends ActivityInstrumentationTestCase2<Mai
         volatile int requests, sessions, receives, acknowledgements;
         volatile boolean durable, wrongId, block;
         volatile JSONObject last, receiveResult;
+        volatile int failuresRemaining;
+        volatile boolean ordered;
         volatile String acknowledgedId;
         final CountDownLatch entered=new CountDownLatch(1), release=new CountDownLatch(1), returned=new CountDownLatch(1);
         @Override public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             if (method.getName().equals("session")) {
                 sessions++;
-                return new JSONObject().put("ok",true).put("session","captured-session").put("note","ready");
+                JSONObject session=new JSONObject().put("ok",true).put("session","captured-session").put("note","ready");
+                if(ordered)session.put("next_seq",1);return session;
             }
             if (method.getName().equals("receive")) {
                 receives++;
@@ -98,9 +101,11 @@ public final class MainActivityTest extends ActivityInstrumentationTestCase2<Mai
                 && stored.getString("session").equals("captured-session")
                 && !prefs.getString("pendingSnapshot","").isEmpty();
             entered.countDown();
+            if(failuresRemaining-- > 0)throw new java.net.SocketTimeoutException("test network interruption");
             if(block && !release.await(5,TimeUnit.SECONDS)) throw new AssertionError("test release timed out");
             JSONObject response=new JSONObject().put("ok",true)
                 .put("id",wrongId ? "wrong-id" : body.getString("id")).put("status","inserted").put("note","dispatched");
+            if(body.has("seq"))response.put("seq",body.getLong("seq"));
             returned.countDown(); return response;
         }
     }
@@ -204,15 +209,38 @@ public final class MainActivityTest extends ActivityInstrumentationTestCase2<Mai
         Button fresh=(Button)field("fresh");
         Button start=(Button)field("start");
         Button receive=(Button)field("receive");
-        LinearLayout actions=(LinearLayout)fresh.getParent();
-        assertSame(actions,start.getParent());
+        LinearLayout actions=(LinearLayout)start.getParent();
         assertSame(actions,receive.getParent());
-        assertEquals(0,actions.indexOfChild(fresh));
-        assertEquals(1,actions.indexOfChild(start));
-        assertEquals(2,actions.indexOfChild(receive));
-        assertEquals("新一段",fresh.getText().toString());
-        assertEquals("开始输入到电脑",start.getText().toString());
+        assertEquals(0,actions.indexOfChild(start));
+        assertEquals(1,actions.indexOfChild(receive));
+        assertEquals("开始输入",start.getText().toString());
         assertEquals("接收",receive.getText().toString());
+        assertEquals(View.GONE,fresh.getVisibility());
+        assertNotNull(activity.findViewById(1003));
+        assertNotNull(activity.findViewById(1004));
+    }
+    public void testCaptureNewWorkspaceAndHistory() throws Exception {
+        activity=getActivity();
+        ui(()->editorSafeText());
+        getInstrumentation().waitForIdleSync();
+        captureOwnActivity("workspace.png");
+        ui(()->activity.findViewById(1004).performClick());
+        android.os.SystemClock.sleep(500);
+        getInstrumentation().waitForIdleSync();
+        captureOwnActivity("history.png");
+    }
+    private void editorSafeText() {
+        try { editor().setText("今天的会议纪要，直接在这里编辑。\n\n语音输入和键盘输入都在同一个正文区域。"); }
+        catch(Exception e) { throw new AssertionError(e); }
+    }
+    private void captureOwnActivity(String name) throws Exception {
+        android.graphics.Bitmap bitmap=getInstrumentation().getUiAutomation().takeScreenshot();
+        assertNotNull(bitmap);
+        java.io.File file=new java.io.File(getInstrumentation().getTargetContext().getCacheDir(),name);
+        try(java.io.FileOutputStream out=new java.io.FileOutputStream(file)) {
+            assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out));
+        }
+        bitmap.recycle();
     }
     public void testReceivePausesReplacesDraftPersistsAndNeverEchoes() throws Exception {
         prefs.edit().putString("draft","手机原有草稿").commit();
@@ -425,4 +453,51 @@ public final class MainActivityTest extends ActivityInstrumentationTestCase2<Mai
         assertEquals("尚未确认的语音",tracker().draft());
         assertEquals(0,transport.requests);
     }
+    public void testHistoryReturnPreservesEditorAndPauses() throws Exception {
+        startWithTransport();
+        CommitEditText input=editor();
+        ui(()->input.getText().append("历史页面返回后保留草稿"));
+        waitFor(()->tracker().pending()==null && !tracker().sent().isEmpty());
+        CommitEditText original=editor();
+        String draft=tracker().draft();
+        ui(()->invoke("showHistory",new Class<?>[]{}));
+        assertFalse(tracker().isActive());
+        assertNotNull(activity.findViewById(2701));
+        ui(()->activity.onBackPressed());
+        assertSame(original,activity.findViewById(1001));
+        assertEquals(draft,tracker().draft());
+        assertFalse(tracker().isActive());
+        assertEquals(View.GONE,((Button)field("fresh")).getVisibility());
+    }
+    public void testAutomaticRecoveryKeepsMessageIdentity() throws Exception {
+        Transport transport=installTransport();transport.ordered=true;transport.failuresRemaining=1;
+        ui(()->invoke("beginSession",new Class<?>[]{}));
+        waitFor(()->tracker().isActive());
+        CommitEditText input=editor();
+        ui(()->input.getText().append("断线后同编号恢复"));
+        waitFor(()->transport.requests==1);
+        String first=transport.last.getString("id");
+        waitFor(()->tracker().pending()==null && transport.requests==2);
+        assertEquals(first,transport.last.getString("id"));
+        assertEquals(1,transport.last.getLong("seq"));
+        assertEquals(1,transport.sessions);
+        assertTrue(tracker().isActive());
+        ui(()->input.getText().append("继续"));
+        waitFor(()->transport.requests==3 && tracker().pending()==null);
+        assertEquals(2,transport.last.getLong("seq"));
+    }
+    public void testStopRecoveryPreventsFurtherRequests() throws Exception {
+        Transport transport=startWithTransport();transport.failuresRemaining=10;
+        CommitEditText input=editor();
+        ui(()->input.getText().append("保留本条但取消重连"));
+        waitFor(()->(Boolean)field("reconnecting"));
+        Button action=(Button)field("start");
+        ui(()->action.performClick());
+        Thread.sleep(1800);
+        assertEquals(1,transport.requests);
+        assertNotNull(tracker().pending());
+        assertFalse(tracker().isActive());
+        assertFalse((Boolean)field("reconnecting"));
+    }
+
 }

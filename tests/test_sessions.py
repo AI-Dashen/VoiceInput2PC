@@ -15,7 +15,7 @@ class SessionTests(unittest.TestCase):
         self.now = 100.0
         self.typed = []
         self.relay = Relay(self.path, lambda text, target: self.typed.append((text, target)),
-                           target_provider=lambda: self.target, clock=lambda: self.now)
+                           target_provider=lambda: self.target, clock=lambda: self.now, focus_policy="pinned")
 
     def message(self, key='one', session=None):
         return {'id': key, 'text': '语音 👋', 'session': session}

@@ -17,15 +17,16 @@ if (releaseRequested) {
 
 android {
     namespace 'io.github.amxooo.voiceinput2pc'
-    compileSdk 35
+    compileSdk 36
+    buildToolsVersion "36.0.0"
     useLibrary 'android.test.runner', false
     useLibrary 'android.test.base', false
     defaultConfig {
         applicationId 'io.github.amxooo.voiceinput2pc'
         minSdk 26
         targetSdk 35
-        versionCode 6
-        versionName '0.6.1-testing'
+        versionCode 8
+        versionName '0.7.0-testing'
         testInstrumentationRunner 'android.test.InstrumentationTestRunner'
     }
     compileOptions {
@@ -45,11 +46,11 @@ android {
     sourceSets.main.assets.exclude("pairing.json")
     buildTypes {
         debug {
-            applicationIdSuffix ".candidate"
-            resValue 'string', 'app_name', '手机输入修正版'
+            applicationIdSuffix providers.gradleProperty("qaPackageSuffix").getOrElse(".v07test")
+            resValue 'string', 'app_name', '万能输入法'
         }
         release {
-            resValue 'string', 'app_name', '语音输入电脑'
+            resValue 'string', 'app_name', '万能输入法'
             minifyEnabled false
             signingConfig signingConfigs.release
         }
@@ -61,4 +62,14 @@ dependencies {
     implementation files('libs/tailcatbridge.aar')
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
     implementation 'androidx.core:core:1.13.1'
+}
+
+// Reflection-based bridge calls do not produce javac missing-class errors.
+// Refuse to ship an APK that silently lost the cross-network runtime.
+tasks.matching { it.name == 'preBuild' }.configureEach {
+    doFirst {
+        if (!file('libs/tailcatbridge.aar').isFile()) {
+            throw new GradleException('Tailcat bridge missing: build or restore trusted tailcatbridge.aar before packaging')
+        }
+    }
 }

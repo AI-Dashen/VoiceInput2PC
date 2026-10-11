@@ -16,14 +16,14 @@ class PublicIdentityTests(unittest.TestCase):
         desktop = (ROOT / 'receiver_app.py').read_text(encoding='utf-8')
 
         self.assertIn("applicationId 'io.github.amxooo.voiceinput2pc'", build)
-        self.assertIn('versionCode 6', build)
-        self.assertIn("versionName '0.6.1-testing'", build)
+        self.assertIn('versionCode 8', build)
+        self.assertIn("versionName '0.7.0-testing'", build)
         self.assertIn("rootProject.name = 'VoiceInput2PC'", settings)
         self.assertIn('android:label="@string/app_name"', manifest)
-        self.assertIn("'app_name', '语音输入电脑'", build)
+        self.assertIn("'app_name', '万能输入法'", build)
         self.assertIn("'app': 'VoiceInput2PC'", server)
         self.assertIn("/ 'VoiceInput2PC'", desktop)
-        self.assertIn("APP_VERSION = '0.5.0'", desktop)
+        self.assertIn("APP_VERSION = '0.7.0'", desktop)
         self.assertNotIn('随手输入', desktop)
 
     def test_java_packages_use_public_namespace(self):
@@ -45,7 +45,7 @@ class PublicIdentityTests(unittest.TestCase):
         self.assertIn('exclude_binaries=True', spec)
         self.assertIn('coll = COLLECT(', spec)
         self.assertIn('upx=False', spec)
-        self.assertIn("StringStruct('ProductVersion', '0.5.0')", version)
+        self.assertIn("StringStruct('ProductVersion', '0.7.0')", version)
         self.assertIn("StringStruct('CompanyName', 'AMXOOO')", version)
 
     def test_public_documentation_explains_scope_and_safety(self):
