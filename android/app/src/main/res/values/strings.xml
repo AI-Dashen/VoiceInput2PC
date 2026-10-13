@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">万能输入法</string>
+    <string name="ime_name">万能输入法 · 本地</string>
+    <string name="ime_subtype_zh_cn">中文（本地）</string>
+</resources>

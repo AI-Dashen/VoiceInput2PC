@@ -1,0 +1,9 @@
+{
+  "provider": "antigravity",
+  "status": "partial",
+  "duration": 85.249,
+  "exit_code": 0,
+  "stdout": "**Android 输入法架构校正与落地建议**：\n\n1. **自研外壳 + librime 核心 MVP 与词库隔离**\n   * **路线**：继承 `InputMethodService`，UI 自研 `Compose` 或轻量 `Custom View`（九宫格/26键），放弃 Trime 繁重 UI 绑定；仅通过 JNI 直接包裹 `librime`（BSD-3-Clause），规避 GPL 传染。\n   * **词库独立核查**：分发时严禁打包可能带有 GPL/涉商用限制的第三方词库。剥离 schema/dict 为独立 asset/下载模块，仅预置开源合规（如雾凇拼音等明晰授权方案）的基础 schema，隔离版权风险。\n\n2. **离线非流式 ASR + VAD 连续切分与取消隔离**\n   * **管线设计**：复用 BiBi 的 `SenseVoicePseudoStreamDelegate`。前端接轻量级 Silero-VAD 连续切段，静音超阈值截断生成 chunk 交由 `SenseVoiceOnnxManager.decodeOffline` 推理，后接独立 `SherpaPunctuationManager` 打标点输出。\n   * **取消隔离**：录音协程与推理 Coroutine 独立生命周期。取消/滑出取消时，向 Channel 发送取消 token，立即 drop 当前 chunk 缓冲并 abort 管道，严禁阻塞 UI 线程。\n\n3. **单实例生命周期与进程边界**\n   * 首版两入口在同一进程，共享同一 `ApplicationContext` 与模型单例。\n   * 需特别注意：系统拉起 `IME Service` 时可能触发冷启动，全局单例应懒加载且支持弱引用解耦，确保 IME 内存不膨胀；首版不做 IPC 多进程支持，避免 Binder 同步复杂化。\n\n4. **输入派发分流控制**\n   * **默认其他 App**：严禁旁路介入，统一走标准 `InputConnection`（`commitText`/`sendKeyEvent`），无系统权限依赖，保证最大兼容。\n   * **本 App 电脑工作区**：仅当检测到前台交互位于工作区目标容器时，才旁路走自定义 WebSocket/AIDL Relay 协议上报，实现零侵入、无系统修改下的精准定向流转。",
+  "stderr": "[agy] 検証済みリリース情報を取得中...",
+  "attempts": 1
+}

@@ -280,7 +280,7 @@ public class MainActivity extends Activity {
 
     private void showMore() {
         String[] items = {"输入历史", "选择电脑", "电脑名称", "发送文件到电脑",
-                "连接方式", "连接诊断", "核对并恢复输入", "使用说明"};
+                "连接方式", "连接诊断", "核对并恢复输入", "本地输入法设置", "使用说明"};
         new AlertDialog.Builder(this).setTitle("更多")
             .setItems(items,(dialog,which)-> {
                 if(which==0)showHistory();
@@ -292,6 +292,7 @@ public class MainActivity extends Activity {
                 } else if(which==4)showConnectionModes();
                 else if(which==5)showConnectionDiagnostics();
                 else if(which==6)newDraft();
+                else if(which==7)startActivity(new Intent(this, ImeSettingsActivity.class));
                 else new AlertDialog.Builder(this).setTitle("持续输入")
                     .setMessage("在电脑选中输入框，点开始，然后一直写或说。使用你当前输入法的麦克风，无需新建段落。电脑窗口切换后，新文字进入当前光标。临时识别文字不会发送；已输入文字被改动时先核对，电脑原文不会自动删除。后台、历史页或不确定回执会暂停，草稿和历史保留。")
                     .setPositiveButton("知道了",null).show();

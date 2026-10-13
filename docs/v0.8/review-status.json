@@ -1,0 +1,35 @@
+{
+  "jev-review.json": {
+    "provider": "typesafe-jev",
+    "status": "success",
+    "duration": 586,
+    "attempts": 1
+  },
+  "claude-review.json": {
+    "provider": "claude",
+    "status": "success",
+    "duration": 20.959,
+    "attempts": 1
+  },
+  "claude-own-ime-review.json": {
+    "provider": "claude",
+    "status": "success",
+    "duration": 21.045,
+    "attempts": 1
+  },
+  "antigravity-review.json": {
+    "provider": "antigravity",
+    "status": "success",
+    "duration": 108.304,
+    "attempts": 1
+  },
+  "antigravity-correction-review.json": {
+    "provider": "antigravity",
+    "status": "partial",
+    "duration": 85.249,
+    "attempts": 1
+  },
+  "overall": "PLAN_COMPLETE_PENDING_VISUAL_AND_USER_APPROVAL",
+  "model_downloaded": false,
+  "v08_code_changed": false
+}

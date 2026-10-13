@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <application android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:label="@string/app_name" android:icon="@drawable/ic_launcher"
@@ -9,6 +11,19 @@
         <activity android:name="com.journeyapps.barcodescanner.CaptureActivity"
             android:screenOrientation="fullSensor" android:exported="false"
             tools:replace="android:screenOrientation" />
+        <activity android:name=".ImeSettingsActivity" android:exported="false" />
+        <service
+            android:name=".UniversalInputMethodService"
+            android:label="@string/ime_name"
+            android:permission="android.permission.BIND_INPUT_METHOD"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/input_method" />
+        </service>
         <activity android:name=".MainActivity" android:exported="true"
             android:configChanges="orientation|screenSize" android:windowSoftInputMode="adjustResize">
             <intent-filter>

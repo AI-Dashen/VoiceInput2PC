@@ -1,0 +1,9 @@
+{
+  "provider": "antigravity",
+  "status": "success",
+  "duration": 108.304,
+  "exit_code": 0,
+  "stdout": "### 架构路线裁决：单 APK 双入口可行性评估\n\n1. **双入口共享核心可行性**：\n   - **架构裁决**：**完全可行**。在同一 APK 内声明 `Activity`（正文与维护界面）与 `InputMethodService`（真正 IME），底层通过本地 Singleton / Application Context 维持 `CoreEngine`（ASR 引擎、草稿缓存与 Relay 模块）。\n   - **文本注入与分流**：IME 模式下通过标准 `getCurrentInputConnection().commitText()` 直接打字，完全免除 Root/Shizuku 注入与系统隐私越界；仅在切至“电脑模式”时将内容转交 Relay（Tailscale/HTTPS）推向 Windows，避免跨应用窃取。\n2. **ASR 抽取与许可证边界**：\n   - **组件抽取**：仅抽取 BiBi-Keyboard 的底层 `AudioRecord` 数据流水线与 Silero-VAD 状态机逻辑（Apache 2.0），直接对接官方 `sherpa-onnx` Android AAR（Apache 2.0，运行 SenseVoice-small ONNX）。严禁整仓移植。\n   - **键盘与拼音版权合规**：FUTO 键盘采用 Source First 1.1，禁止闭源混入或不合规集成；开源拼音引擎如 Open-Source Rime（GPLv3）若通过 JNI 静态绑定会引发 GPL 传染。裁决：拼音核心若使用 GPL/LGPL，需通过独立 Service/AIDL 进程隔离或直接选用 Apache/MIT 兼容词库实现（如基于词频 Trie 的轻量分词检索），确保主仓纯粹性。\n\n---\n\n### 3 项关键技术 Probe（可行性验证探针）\n\n#### Probe 1: Android 16 IME 麦克风采集与后台生命周期\n* **核心风险**：Android 14+ / 16 对后台麦克风访问限制严格；`InputMethodService` 在键盘收起或切换焦点应用时可能被系统判定非前台，导致 `AudioRecord` 录音被系统静音或抛出 SecurityException。\n* **验证点**：\n  1. 验证在 IME 窗口可见状态下分配 `RECORD_AUDIO` 权限与采集稳定性。\n  2. 测试调用 `audioRecord.stop()`、`audioRecord.release()` 与线程中断（Cancel）的原子时序，防止收起键盘时音频缓冲区挂起或死锁。\n\n#### Probe 2: sherpa-onnx (SenseVoice) 单实例常驻与内存/重载安全\n* **核心风险**：SenseVoice-small 模型权重加载需占数百 MB 内存，若在 `Activity` 与 `InputMethodService` 生命周期重建时重复加载，极易导致 OOM。\n* **验证点**：\n  1. 验证 `SherpaOnnxOnlineRecognizer` 单例模式：在 Application 级常驻与低内存（`onLowMemory`）时的防暴退保护。\n  2. 离线验证原生标点处理能力（SenseVoice 自带反逆文本标准化与标点预测，确认本地无网络 fallback 调用）。\n\n#### Probe 3: 原生 Android/Gradle 依赖与 NDK 符号集成\n* **核心风险**：在纯 Android/Termux 原生环境构建，避免 Debian/proot 依赖断裂。\n* **验证点**：\n  1. 验证官方 `com.k2fsa.sherpa.onnx` AAR（`arm64-v8a`）及 JNI 符号能否在纯 Android 构建链下无缝解析。\n  2. 纯 JNI 接口的输入缓冲区直接映射，杜绝跨语言频繁对象拷贝开销。",
+  "stderr": "[agy] 検証済みリリース情報を取得中...",
+  "attempts": 1
+}

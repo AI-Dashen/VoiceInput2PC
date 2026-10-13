@@ -1,0 +1,1 @@
+分类并建议路由：为Android16 OnePlus15上的万能输入法v0.8研究集成本地离线ASR及中文键盘，用现有开源代码适配。只做方案，不编译、不安装、不改Android系统。Codex总调度，Claude审产品/状态，Antigravity审Android/本地推理，Jev仅分类与风险。
