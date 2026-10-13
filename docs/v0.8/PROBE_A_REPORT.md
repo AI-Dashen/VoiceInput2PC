@@ -1,6 +1,6 @@
 # Probe A｜Android IME 与本地录音生命周期
 
-日期：2026-10-13。当前状态：`CODE_COMPLETE` / `BUILD_PASS` / `PENDING_DEVICE_VERIFICATION`。
+日期：2026-10-13。当前状态：`PENDING`。代码与构建通过；真机已验证输入法启用、ASCII 文本提交及本地录音启停，敏感输入框与系统中断场景仍待验证。
 
 ## 已实现
 
@@ -23,10 +23,20 @@
 
 ## 尚未验证
 
-- Android 设置中启用该 Probe 输入法。
-- 真机输入框键入、焦点切换与密码字段行为。
-- 麦克风授权后录音开始、取消、收起释放。
+- 焦点切换时旧回调不得写入新输入框。
+- 密码字段必须禁用语音。
+- 键盘收起时的录音自动释放（主动点击停止已通过）。
 - 来电/锁屏/应用切换中断。
 - 中文候选、SenseVoice final、Local 零网络。
 
 以上项目未完成前，Probe A 不标 `VERIFIED`。
+
+
+## 2026-10-13 真机证据
+
+- 设备：OnePlus 15（PLK110），Android 16。
+- 安装包：`io.github.amxooo.voiceinput2pc.v08probe`，版本 `0.8.0-probe-a`。
+- Android InputMethodManager 显示该服务为 `mSelectedMethodId`、`mCurId`，且 `mInputShown=true`。
+- 用户通过该键盘向当前会话提交了 `eubm`，证明基础按键到 `InputConnection` 的真实链路可用；该结果也证明当前仍只有 ASCII composing，没有中文解码。
+- `RECORD_AUDIO` AppOp 为 `allow`；真机日志显示 `AudioRecord` 以 16000 Hz 启动成功，约 4 秒后调用 `stop()` 并完成释放，无崩溃。
+- 本轮未验证 SenseVoice 或任何语音转文字；Probe A 不保存录音。
