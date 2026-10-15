@@ -2,9 +2,11 @@
 
 [返回项目首页](README.md)
 
+> 最新测试版为0.7.0-testing；旧文档中的0.5/0.6说明保留技术上下文，不代表最新发布。0.8输入法介绍见[输入法说明](docs/INPUT_METHOD.md)。
+
 ## 下载成品
 
-打开 [GitHub 最新版本下载页](https://github.com/AI-Dashen/VoiceInput2PC/releases/latest)，下载 Windows ZIP 和 Android APK。
+打开 [GitHub 最新版本下载页](https://github.com/AI-Dashen/VoiceInput2PC/releases/tag/v0.7.0-testing)，下载 Windows ZIP 和 Android APK。
 
 > `main` 当前源码版本为 **v0.5.0**。Releases 页面显示的是已经正式打包发布的版本；如果 Release 版本号仍低于 v0.5.0，以 Release 页面实际文件为准。
 

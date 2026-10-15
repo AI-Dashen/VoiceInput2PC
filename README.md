@@ -1,10 +1,30 @@
 <div align="center">
 
-# 手机语音输入电脑 · VoiceInput2PC
+# 万能语音输入法｜Universal Voice Input
 
 **不买麦克风、不传音频流，直接用口袋里的手机输入法向电脑光标位置安全口述文字。**
 
 </div>
+
+## 下载与版本：0.7 已发布，0.8 输入法正在开发
+
+| 版本 | 定位 | 入口 |
+| --- | --- | --- |
+| **0.7.0-testing** | 可下载的最新测试版；含 Android APK 与 Windows ZIP，不内置离线识别包 | [打开0.7下载页](https://github.com/AI-Dashen/VoiceInput2PC/releases/tag/v0.7.0-testing) |
+| **0.8 输入法开发** | 真正的 Android 系统输入法路线；远端 Probe A 与本机后续代码状态分开 | [查看输入法介绍](docs/INPUT_METHOD.md) · [开发分支](https://github.com/AI-Dashen/VoiceInput2PC/tree/feature/universal-input-v08) |
+| 0.6.1 | 上一个非预发布版本，因此 GitHub仍标记为 Latest | [历史稳定版](https://github.com/AI-Dashen/VoiceInput2PC/releases/tag/v0.6.1) |
+
+### 输入法是主体，跨设备传字是其中功能
+
+0.7 解决手机文字送达电脑的问题；0.8把产品推进为同一 APK 内的系统输入法，围绕语音、九宫格、26键与输出目标统一输入会话。本机 `0.8.0-local-input` 的完整后续改动尚未提交，远端分支目前是 `0.8.0-probe-a`，不能混称为完整源码已交付。
+
+![0.8 输入法结构示意](docs/assets/input-method-roadmap.png)
+
+[输入法的架构、当前代码状态与源码交付缺口](docs/INPUT_METHOD.md)
+
+## 0.7 跨设备文字链路
+
+以下工作原理说明对应0.7跨设备能力；不代表0.7已包含0.8本地识别引擎。
 
 复用安卓手机现成输入法完成语音转文字，通过 HTTPS、专用令牌与证书指纹固定（跨网内置 Tailcat/WireGuard 数据面）将确认文本加密送达 Windows 接收端，以 Unicode 键盘输入直接打入绑定窗口光标处。
 
@@ -36,7 +56,7 @@
 3. 用手机输入法口述，确认后的新增文字传到电脑。
 4. 切换目标窗口前先暂停；需要取回电脑文字时，明确点击发送剪贴板。
 
-成品版本以 [Releases](https://github.com/AI-Dashen/VoiceInput2PC/releases) 实际文件为准，完整安装与源码步骤见 [USAGE.md](USAGE.md)。
+成品版本见 [0.7测试版](https://github.com/AI-Dashen/VoiceInput2PC/releases/tag/v0.7.0-testing)，其他版本以 [Releases](https://github.com/AI-Dashen/VoiceInput2PC/releases) 实际文件为准，完整安装与源码步骤见 [USAGE.md](USAGE.md)。
 
 ## 实现与验证范围
 
