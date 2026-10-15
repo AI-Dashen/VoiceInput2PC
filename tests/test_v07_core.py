@@ -28,6 +28,14 @@ class CurrentFocusTests(unittest.TestCase):
         self.relay.accept(first)
         self.assertEqual([('第一句', 'window-A'), ('第二句', 'window-B')], self.typed)
 
+    def test_one_shot_uuid_retry_survives_renewed_session(self):
+        first = {'id': 'ime-one-shot', 'text': '远端草稿', 'session': self.session}
+        self.assertEqual('inserted', self.relay.accept(first)['status'])
+        self.session = self.relay.begin_session()['session']
+        retry = {'id': 'ime-one-shot', 'text': '远端草稿', 'session': self.session}
+        self.assertEqual('inserted', self.relay.accept(retry)['status'])
+        self.assertEqual([('远端草稿', 'window-A')], self.typed)
+
     def test_failure_after_capture_disarms_and_does_not_replay(self):
         def failure(text, target):
             self.typed.append((text, target))

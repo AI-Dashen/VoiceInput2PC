@@ -6,11 +6,12 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <application android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:label="@string/app_name" android:icon="@drawable/ic_launcher"
-        android:allowBackup="false" android:usesCleartextTraffic="false"
+        android:extractNativeLibs="true" android:allowBackup="false" android:usesCleartextTraffic="false"
         android:supportsRtl="true">
         <activity android:name="com.journeyapps.barcodescanner.CaptureActivity"
             android:screenOrientation="fullSensor" android:exported="false"
             tools:replace="android:screenOrientation" />
+        <service android:name=".LocalAsrService" android:process=":local_asr" android:exported="false" />
         <activity android:name=".ImeSettingsActivity" android:exported="false" />
         <service
             android:name=".UniversalInputMethodService"
@@ -24,12 +25,14 @@
                 android:name="android.view.im"
                 android:resource="@xml/input_method" />
         </service>
-        <activity android:name=".MainActivity" android:exported="true"
-            android:configChanges="orientation|screenSize" android:windowSoftInputMode="adjustResize">
+        <activity android:name=".HomeActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity android:name=".MainActivity" android:exported="true"
+            android:configChanges="orientation|screenSize" android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

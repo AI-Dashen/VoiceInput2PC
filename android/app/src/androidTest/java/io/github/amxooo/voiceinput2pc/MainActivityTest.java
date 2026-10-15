@@ -13,18 +13,26 @@ import android.widget.LinearLayout;
 import org.json.JSONObject;
 import java.lang.reflect.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /** Tests the real Activity and persistence; only the external HTTPS boundary is replaced. */
 public final class MainActivityTest extends ActivityInstrumentationTestCase2<MainActivity> {
     private SharedPreferences prefs;
+    private Map<String,?> originalPreferences;
+    private long originalHistoryMaxId;
     private MainActivity activity;
     private Transport runningTransport;
     public MainActivityTest() { super(MainActivity.class); }
     @Override protected void setUp() throws Exception {
         super.setUp();
         prefs=getInstrumentation().getTargetContext().getSharedPreferences("voiceinput2pc",0);
-        // This suite is run only in the dedicated test emulator and cannot reach the PC.
+        // Instrumentation shares the target app's UID. Snapshot every value so a real
+        // phone run cannot replace the user's draft or pairing with test fixtures.
+        originalPreferences=new HashMap<>(prefs.getAll());
+        originalHistoryMaxId=latestHistoryId();
         prefs.edit().clear().commit();
         assertTrue(PairingStore.save(prefs, testPairing()));
     }
@@ -41,7 +49,37 @@ public final class MainActivityTest extends ActivityInstrumentationTestCase2<Mai
                 waitFor(()->activity.isDestroyed());
             }
             getInstrumentation().waitForIdleSync();
+            restoreOriginalPreferences();
+            removeTestHistory();
         } finally { super.tearDown(); }
+    }
+    @SuppressWarnings("unchecked")
+    private void restoreOriginalPreferences() {
+        SharedPreferences.Editor editor=prefs.edit().clear();
+        for (Map.Entry<String,?> entry:originalPreferences.entrySet()) {
+            Object value=entry.getValue(); String key=entry.getKey();
+            if (value instanceof String) editor.putString(key,(String)value);
+            else if (value instanceof Integer) editor.putInt(key,(Integer)value);
+            else if (value instanceof Long) editor.putLong(key,(Long)value);
+            else if (value instanceof Float) editor.putFloat(key,(Float)value);
+            else if (value instanceof Boolean) editor.putBoolean(key,(Boolean)value);
+            else if (value instanceof Set) editor.putStringSet(key,new java.util.HashSet<>((Set<String>)value));
+            else throw new AssertionError("Unsupported preference type for "+key);
+        }
+        assertTrue("Failed to restore application preferences",editor.commit());
+    }
+    private long latestHistoryId() {
+        InputHistoryStore store=new InputHistoryStore(getInstrumentation().getTargetContext());
+        try (android.database.Cursor cursor=store.getReadableDatabase().rawQuery(
+                "SELECT COALESCE(MAX(id),0) FROM events",null)) {
+            cursor.moveToFirst(); return cursor.getLong(0);
+        } finally { store.close(); }
+    }
+    private void removeTestHistory() {
+        InputHistoryStore store=new InputHistoryStore(getInstrumentation().getTargetContext());
+        try {
+            store.getWritableDatabase().delete("events","id>?",new String[]{Long.toString(originalHistoryMaxId)});
+        } finally { store.close(); }
     }
     private Object field(String name) throws Exception {
         Field field=MainActivity.class.getDeclaredField(name); field.setAccessible(true); return field.get(activity);
@@ -141,6 +179,7 @@ public final class MainActivityTest extends ActivityInstrumentationTestCase2<Mai
         assertNotNull("Built-in scanner entry is missing", scanner);
         assertTrue(scanner instanceof Button);
         assertTrue(((Button)scanner).getText().toString().contains("扫码"));
+        captureOwnActivity("pairing-redesign.png");
     }
     public void testActionRowIsCompactAndExtraFunctionsDoNotOccupyEditorSpace() throws Exception {
         activity=getActivity();

@@ -1,6 +1,16 @@
-# 万能输入法 v0.8 Probe A
+# 万能语音输入法｜Universal Voice Input
 
-本分支基于 v0.7，Android 安装包为 0.8.0-probe-a（code 9）。当前新增系统 InputMethodService、输入会话隔离和本地录音生命周期；中文候选与离线识别仍为 PENDING，不能把 Probe 包称为完整 v0.8。产品方向、架构和验收见 [v0.8 文档](docs/v0.8/PRODUCT_DIRECTION_V08.md)。
+## 0.8 本地输入法开发源码
+
+本分支已同步手机上的 `0.8.0-local-input`（versionCode 10）开发源码，替代此前仅有的 Probe A。输入法是主体，向电脑传输文字是输出能力之一；包含语音草稿、九宫格、26键、符号、编辑器会话隔离、Rime JNI和跨设备输出路由。
+
+- [输入法架构与版本](docs/INPUT_METHOD.md)
+- [源码构建前提、依赖与本次验证](docs/v0.8/SOURCE_DELIVERY_2026-10-15.md)
+- [0.7 Android / Windows 测试版下载](https://github.com/AI-Dashen/VoiceInput2PC/releases/tag/v0.7.0-testing)
+
+**源码已上传不等于模型开放或完整APK公开发布。** 不包含闭源ASR模型/运行库、原始录音、个人配对信息和编译产物。直接克隆仍需按构建说明准备依赖；现有本机依赖环境的构建结果单独记录。
+
+## 既有跨设备功能说明
 
 手机主编辑区、历史查询/四格式导出、多电脑选择、同消息安全重连、Windows 当前焦点与历史窗口均已实现代码。Android APK 已构建；用户最终真机验收待进行。Windows 更新源码已交付，但尚未在 Windows 生成本版 EXE，不能将旧 EXE 视为包含新功能。
 

@@ -1,0 +1,30 @@
+# App-owned numeric Rime spelling adapter, based on official Rime alphabet algebra.
+schema:
+  schema_id: t9_private
+  name: 雾凇九宫格
+  version: '0.8.1'
+switches:
+  - name: ascii_mode
+    reset: 0
+    states: [中文, English]
+engine:
+  processors: [ascii_composer, recognizer, key_binder, speller, punctuator, selector, navigator, express_editor]
+  segmentors: [ascii_segmentor, matcher, abc_segmentor, punct_segmentor, fallback_segmentor]
+  translators: [punct_translator, script_translator]
+  filters: [uniquifier]
+speller:
+  alphabet: '23456789'
+  initials: '23456789'
+  delimiter: " '"
+  algebra:
+    - xlit/abcdefghijklmnopqrstuvwxyz/22233344455566677778889999/
+translator:
+  dictionary: rime_ice
+  prism: t9
+  enable_user_dict: false
+  enable_sentence: true
+  spelling_hints: 8
+key_binder:
+  bindings:
+    - {when: has_menu, accept: Page_Up, send: Page_Up}
+    - {when: has_menu, accept: Page_Down, send: Page_Down}

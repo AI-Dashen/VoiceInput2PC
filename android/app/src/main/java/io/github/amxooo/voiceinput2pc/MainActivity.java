@@ -28,6 +28,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
+    public static final String EXTRA_OPEN_HISTORY = "io.github.amxooo.voiceinput2pc.OPEN_HISTORY";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private CommitEditText editor;
@@ -58,12 +59,12 @@ public class MainActivity extends Activity {
     private boolean busy, loading, destroyed, resumed, storageBlocked, sendingText, receiveQueued;
     private boolean fileTransferSupported;
     private int activationEpoch, receiveQueueEpoch = -1;
-    private final int green = Color.rgb(22,112,91);
+    private final int green = VoiceUiTheme.GREEN;
     private final Runnable flush = this::transmitCommitted;
     private static final int PICK_FILE_REQUEST = 2606;
 
-    private final int paper = Color.rgb(246, 239, 230);
-    private final int brown = Color.rgb(117, 79, 42);
+    private final int paper = VoiceUiTheme.PAPER;
+    private final int brown = VoiceUiTheme.BROWN;
     private GradientDrawable surface(int color, int border, int radius) {
         GradientDrawable d = new GradientDrawable();
         d.setColor(color); d.setCornerRadius(dp(radius));
@@ -78,6 +79,24 @@ public class MainActivity extends Activity {
         b.setBackground(surface(primary ? brown : Color.rgb(255,249,242),
                 primary ? 0 : Color.rgb(218,200,179),22));
     }
+    private LinearLayout sectionCard() { return VoiceUiTheme.card(this); }
+
+    private LinearLayout.LayoutParams sectionParams() {
+        LinearLayout.LayoutParams value = row(-2);
+        value.bottomMargin = dp(12);
+        return value;
+    }
+
+    private TextView sectionTitle(String value) {
+        return VoiceUiTheme.title(this, value, 17);
+    }
+
+    private TextView sectionNote(String value) {
+        TextView note = VoiceUiTheme.text(this, value, 13, VoiceUiTheme.MUTED);
+        note.setPadding(0, dp(5), 0, 0);
+        return note;
+    }
+
     private void showHistory() {
         if (busy) { say("请等待当前请求完成后查看历史。", true); return; }
         if (tracker != null) { pauseLocal(); if (!save()) return; }
@@ -95,23 +114,52 @@ public class MainActivity extends Activity {
     }
     private void showDevices() {
         if (!canChangeConnection()) return;
-        java.util.List<PairingConfig> devices = PairingStore.list(prefs);
-        String[] names = new String[devices.size()+1];
-        for(int i=0;i<devices.size();i++) names[i]=PairingStore.label(prefs,devices.get(i))
-                + (devices.get(i).equals(currentPairing) ? " · 当前" : "");
-        names[names.length-1]="＋ 连接新电脑";
-        new AlertDialog.Builder(this).setTitle("选择电脑")
-            .setItems(names,(dialog,which)-> {
-                if(which==devices.size()) {
-                    scannerReturnToTyping=currentPairing!=null;
-                    showPairingScreen("扫描新电脑的配对码，草稿已保留。");
-                } else {
-                    PairingConfig selected=devices.get(which);
-                    if(!PairingStore.save(prefs,selected)){say("设备选择保存失败。",true);return;}
-                    showTypingScreen(selected);
-                }
-            }).setNegativeButton("关闭",null).show();
+        java.util.List<PairingConfig> devices=PairingStore.list(prefs);
+        LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(18),dp(16),dp(18),dp(10));content.setBackgroundColor(VoiceUiTheme.PAPER);
+        content.addView(VoiceUiTheme.title(this,"选择电脑",24));
+        TextView note=VoiceUiTheme.text(this,"切换目标不会删除草稿。新电脑只需重新扫码配对一次。",13,VoiceUiTheme.MUTED);
+        note.setPadding(0,dp(4),0,dp(12));content.addView(note);
+        android.widget.ScrollView listScroll=new android.widget.ScrollView(this);
+        LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);
+        listScroll.addView(list);
+        if (devices.isEmpty()) {
+            TextView empty=VoiceUiTheme.text(this,"还没有已配对电脑",14,VoiceUiTheme.MUTED);
+            empty.setPadding(dp(4),dp(12),dp(4),dp(12));list.addView(empty);
+        }
+        final AlertDialog dialog=new AlertDialog.Builder(this).create();
+        for (PairingConfig device:devices) {
+            boolean active=device.equals(currentPairing);
+            String deviceLabel=PairingStore.label(prefs,device)+(active ? " · 当前" : "");
+            Button deviceRow=VoiceUiTheme.button(this,deviceLabel,false);
+            deviceRow.setGravity(android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL);
+            deviceRow.setContentDescription((active ? "当前电脑 " : "切换到电脑 ")+PairingStore.label(prefs,device));
+            LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,dp(50));params.bottomMargin=dp(8);
+            list.addView(deviceRow,params);
+            deviceRow.setOnClickListener(v-> {
+                if (!PairingStore.save(prefs,device)) { say("设备选择保存失败。",true);return; }
+                dialog.dismiss();showTypingScreen(device);
+            });
+        }
+        LinearLayout.LayoutParams scrollParams=new LinearLayout.LayoutParams(-1,0,1);
+        content.addView(listScroll,scrollParams);
+        Button add=VoiceUiTheme.button(this,"连接新电脑",true);
+        LinearLayout.LayoutParams addParams=new LinearLayout.LayoutParams(-1,dp(48));addParams.topMargin=dp(10);
+        content.addView(add,addParams);
+        add.setOnClickListener(v-> {
+            dialog.dismiss();scannerReturnToTyping=currentPairing!=null;
+            showPairingScreen("扫描新电脑的配对码，草稿已保留。");
+        });
+        Button close=VoiceUiTheme.button(this,"关闭",false);
+        LinearLayout.LayoutParams closeParams=new LinearLayout.LayoutParams(-1,dp(44));closeParams.topMargin=dp(8);
+        content.addView(close,closeParams);close.setOnClickListener(v->dialog.dismiss());
+        dialog.setView(content);dialog.setOnShowListener(ignored-> {
+            android.view.Window window=dialog.getWindow();
+            if (window!=null) window.setLayout(-1,Math.min(dp(560),getResources().getDisplayMetrics().heightPixels-dp(80)));
+        });
+        dialog.show();
     }
+
     private void renameDevice() {
         if(currentPairing==null || !canChangeConnection())return;
         EditText name=new EditText(this);
@@ -170,6 +218,9 @@ public class MainActivity extends Activity {
         }
         if (savedInstanceState != null && savedInstanceState.getBoolean("history_visible",false)) {
             showHistory(); historyScreen.restoreState(savedInstanceState); historyScreen.show();
+        } else if (getIntent().getBooleanExtra(EXTRA_OPEN_HISTORY,false)) {
+            getIntent().removeExtra(EXTRA_OPEN_HISTORY);
+            showHistory();
         }
     }
 
@@ -183,6 +234,11 @@ public class MainActivity extends Activity {
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        if (intent != null && intent.getBooleanExtra(EXTRA_OPEN_HISTORY,false)) {
+            intent.removeExtra(EXTRA_OPEN_HISTORY);
+            showHistory();
+            return;
+        }
         String incoming = incomingPairing(intent);
         if (incoming != null) {
             clearQueuedReceive();
@@ -202,46 +258,80 @@ public class MainActivity extends Activity {
     private void showPairingScreen(String message) {
         clearQueuedReceive();
         setTitle("连接电脑");
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackgroundColor(paper);
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         applyScreenInsets(layout);
         layout.setBackgroundColor(paper);
-        TextView title = label("万能输入法", 22, Color.rgb(45,39,32));
-        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        layout.addView(title, row(-2));
-        TextView guide = label("连接电脑后，在手机写字或使用当前输入法说话。文字会进入电脑当前光标，完整历史保存在手机。",
-                15, Color.DKGRAY);
-        guide.setPadding(0, dp(10), 0, dp(16));
-        layout.addView(guide, row(-2));
-        Button scan = new Button(this);
-        scan.setId(1002); scan.setText("扫码连接");
+
+        TextView title = VoiceUiTheme.title(this,"连接电脑",28);
+        layout.addView(title,row(-2));
+        TextView guide = VoiceUiTheme.text(this,
+                "把手机上的文字直接送到电脑光标。首次使用只需完成一次安全配对。",
+                14,VoiceUiTheme.MUTED);
+        guide.setPadding(0,dp(4),0,dp(16));
+        layout.addView(guide,row(-2));
+
+        LinearLayout quick = sectionCard();
+        quick.addView(sectionTitle("扫码配对"));
+        quick.addView(sectionNote("在电脑接收端打开“配对手机”，再扫描屏幕上的二维码。"));
+        Button scan = VoiceUiTheme.button(this,"扫码连接电脑",true);
+        scan.setId(1002);
+        scan.setContentDescription("扫描电脑接收端显示的配对二维码");
+        LinearLayout.LayoutParams scanParams=row(48);scanParams.topMargin=dp(12);
+        quick.addView(scan,scanParams);
         scan.setOnClickListener(v -> launchScanner());
-        styleAction(scan,true); layout.addView(scan, row(44));
+        layout.addView(quick,sectionParams());
+
+        LinearLayout manual = sectionCard();
+        manual.addView(sectionTitle("手动导入"));
+        manual.addView(sectionNote("也可以粘贴电脑生成的完整配对码。原有设备不会被覆盖。"));
         pairingInput = new EditText(this);
-        pairingInput.setHint("粘贴 voiceinput2pc:// 开头的完整配对码");
+        pairingInput.setHint("粘贴 voiceinput2pc:// 开头的配对码");
+        pairingInput.setTextSize(14);
+        pairingInput.setTextColor(VoiceUiTheme.INK);
+        pairingInput.setHintTextColor(Color.rgb(139,132,123));
         pairingInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE
                 | InputType.TYPE_TEXT_VARIATION_URI);
-        pairingInput.setMinLines(3);
+        pairingInput.setMinLines(3);pairingInput.setMaxLines(6);
         pairingInput.setGravity(android.view.Gravity.TOP | android.view.Gravity.START);
-        layout.addView(pairingInput, new LinearLayout.LayoutParams(-1, 0, 1));
-        status = label(message, 14, green);
-        status.setPadding(0, dp(12), 0, dp(8));
-        layout.addView(status, row(-2));
-        pairingButton = new Button(this);
-        pairingButton.setText("导入并连接");
-        pairingButton.setTextColor(Color.WHITE);
-        pairingButton.setBackgroundTintList(ColorStateList.valueOf(green));
+        pairingInput.setPadding(dp(12),dp(10),dp(12),dp(10));
+        pairingInput.setBackground(VoiceUiTheme.surface(this,Color.WHITE,VoiceUiTheme.BORDER,12));
+        LinearLayout.LayoutParams codeParams=row(-2);codeParams.topMargin=dp(12);
+        manual.addView(pairingInput,codeParams);
+        pairingButton = VoiceUiTheme.button(this,"导入配对码",false);
+        pairingButton.setContentDescription("核对并导入粘贴的电脑配对码");
         pairingButton.setOnClickListener(v -> importPairing(pairingInput.getText().toString().trim()));
-        styleAction(pairingButton,true);layout.addView(pairingButton, row(44));
-        Button paired = new Button(this);paired.setText("已配对电脑");styleAction(paired,false);
-        paired.setOnClickListener(v->showDevices());layout.addView(paired,row(40));
-        Button records = new Button(this);records.setId(1004);records.setText("输入历史");
-        styleAction(records,false);records.setOnClickListener(v->showHistory());layout.addView(records,row(40));
-        TextView safety = label("配对码相当于连接密码，只在自己的手机和电脑之间使用。仅扫码时申请相机权限，不需要麦克风权限。",
-                12, Color.GRAY);
-        safety.setPadding(0, dp(12), 0, 0);
-        layout.addView(safety, row(-2));
-        inputRoot=layout;setContentView(layout);
+        LinearLayout.LayoutParams importParams=row(46);importParams.topMargin=dp(10);
+        manual.addView(pairingButton,importParams);
+        layout.addView(manual,sectionParams());
+
+        LinearLayout stateCard=sectionCard();
+        LinearLayout stateHeading=new LinearLayout(this);stateHeading.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        stateHeading.addView(sectionTitle("连接状态"),new LinearLayout.LayoutParams(0,-2,1));
+        stateHeading.addView(VoiceUiTheme.statusChip(this,"待配对",false),new LinearLayout.LayoutParams(-2,-2));
+        stateCard.addView(stateHeading);
+        status = VoiceUiTheme.text(this,message,14,green);
+        status.setPadding(0,dp(9),0,0);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        stateCard.addView(status);
+        layout.addView(stateCard,sectionParams());
+
+        LinearLayout shortcuts=sectionCard();
+        shortcuts.addView(sectionTitle("设备与记录"));
+        Button paired=VoiceUiTheme.button(this,"已配对电脑  ›",false);
+        LinearLayout.LayoutParams pairedParams=row(46);pairedParams.topMargin=dp(8);
+        shortcuts.addView(paired,pairedParams);paired.setOnClickListener(v->showDevices());
+        Button records=VoiceUiTheme.button(this,"输入历史  ›",false);
+        records.setId(1004);LinearLayout.LayoutParams historyParams=row(46);historyParams.topMargin=dp(8);
+        shortcuts.addView(records,historyParams);records.setOnClickListener(v->showHistory());
+        layout.addView(shortcuts,sectionParams());
+
+        TextView safety=sectionNote("配对码相当于连接密码，只在自己的手机和电脑之间使用。扫码时才会申请相机权限。");
+        safety.setPadding(dp(4),0,dp(4),dp(8));layout.addView(safety,row(-2));
+        scroll.addView(layout);
+        inputRoot=scroll;setContentView(scroll);
     }
 
     private void applyScreenInsets(LinearLayout layout) {
@@ -373,12 +463,7 @@ public class MainActivity extends Activity {
     }
 
     private RelayTransport createTransport(PairingConfig pairing) throws Exception {
-        if (prefs.getBoolean("lanOnly_" + pairing.fingerprint, false)) {
-            PairingConfig local = new PairingConfig(pairing.host, pairing.port, pairing.token,
-                    pairing.fingerprint, PairingConfig.TRANSPORT_LAN, "", pairing.deviceId);
-            return new RelayClient(this, local);
-        }
-        return pairing.isAuto() ? new ConnectionManager(this, pairing) : new RelayClient(this, pairing);
+        return RelayTransportFactory.create(this,prefs,pairing);
     }
 
     private String routeNote(RelayTransport transport) {
@@ -395,8 +480,18 @@ public class MainActivity extends Activity {
         if (message == null || message.trim().isEmpty()) {
             message = failure == null ? "未知错误" : failure.getClass().getSimpleName();
         }
+        Throwable cause=failure;
+        while(cause!=null) {
+            if(cause instanceof java.net.ConnectException)
+                return "连接失败 · 没有找到电脑接收端，请确认电脑端已经打开";
+            if(cause instanceof java.net.SocketTimeoutException)
+                return "连接超时 · 请确认手机与电脑网络正常后重试";
+            if(cause instanceof java.net.UnknownHostException)
+                return "连接失败 · 找不到电脑地址，请重新配对或检查网络";
+            cause=cause.getCause();
+        }
         message = message.replaceAll("tc[A-Za-z0-9_-]{20,4094}", "tc<redacted>");
-        if (message.length() > 360) message = message.substring(0, 360);
+        if (message.length() > 120) message = message.substring(0, 120);
         return "连接失败 · " + message;
     }
 
@@ -433,57 +528,69 @@ public class MainActivity extends Activity {
         layout.setOrientation(LinearLayout.VERTICAL);
         applyScreenInsets(layout);
         layout.setBackgroundColor(paper);
+
         LinearLayout heading = new LinearLayout(this);
         heading.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        TextView title = label("万能输入法",20,Color.rgb(45,39,32));
-        title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
-        Button more = new Button(this); more.setId(1004); more.setText("历史");styleAction(more,false);
-        more.setOnClickListener(v -> showHistory());
-        heading.addView(more, new LinearLayout.LayoutParams(dp(60), dp(36)));
+        TextView title = VoiceUiTheme.title(this,"电脑输入",27);
+        heading.addView(title,new LinearLayout.LayoutParams(0,-2,1));
+        Button more=VoiceUiTheme.button(this,"历史",false);more.setId(1004);
+        more.setContentDescription("打开输入历史");more.setOnClickListener(v->showHistory());
+        heading.addView(more,new LinearLayout.LayoutParams(dp(72),dp(40)));
         layout.addView(heading,row(-2));
-        destination = label(PairingStore.label(prefs,pairing)+"  ▾",14,Color.rgb(59,46,32));
-        destination.setPadding(dp(12),dp(9),dp(12),dp(9));
-        destination.setBackground(surface(Color.rgb(232,217,201),0,12));
-        destination.setOnClickListener(v -> showDevices());
-        LinearLayout.LayoutParams deviceParams=row(-2);deviceParams.topMargin=dp(10);deviceParams.bottomMargin=dp(8);
-        layout.addView(destination,deviceParams);
-        status = label("已暂停 · 文字只保存在本机",13,green);
-        status.setPadding(dp(2),0,dp(2),dp(8));
-        layout.addView(status,row(-2));
+        LinearLayout deviceCard=sectionCard();
+        LinearLayout deviceHeading=new LinearLayout(this);deviceHeading.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        deviceHeading.addView(sectionTitle("当前电脑"),new LinearLayout.LayoutParams(0,-2,1));
+        TextView connected=VoiceUiTheme.statusChip(this,"已配对",true);
+        deviceHeading.addView(connected,new LinearLayout.LayoutParams(-2,-2));
+        deviceCard.addView(deviceHeading);
+        destination=VoiceUiTheme.text(this,PairingStore.label(prefs,pairing)+"  ›",16,VoiceUiTheme.BROWN);
+        destination.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        destination.setPadding(0,dp(10),0,dp(4));destination.setMinHeight(dp(44));
+        destination.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        destination.setContentDescription("管理当前电脑 "+PairingStore.label(prefs,pairing));
+        destination.setOnClickListener(v->showDevices());deviceCard.addView(destination,row(-2));
+        status=VoiceUiTheme.text(this,"已暂停 · 文字只保存在本机",13,green);
+        status.setPadding(0,dp(2),0,0);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        deviceCard.addView(status,row(-2));
+        layout.addView(deviceCard,sectionParams());
+
+        LinearLayout editorCard=sectionCard();
+        editorCard.addView(sectionTitle("要输入的文字"));
         editor = new CommitEditText(this);
-        editor.setId(1001); editor.setSaveEnabled(false);
-        editor.setTextSize(20); editor.setTextColor(Color.rgb(30,39,35));
+        editor.setId(1001);editor.setSaveEnabled(false);
+        editor.setTextSize(20);editor.setTextColor(VoiceUiTheme.INK);
+        editor.setHintTextColor(Color.rgb(139,132,123));
         editor.setGravity(android.view.Gravity.TOP | android.view.Gravity.START);
-        editor.setHint("在这里写字，或用输入法麦克风说话…\n\n点开始后，确认的文字会持续输入电脑当前光标。");
+        editor.setHint("在这里写字，或用输入法麦克风说话…\n\n点开始后，确认的文字会持续进入电脑当前光标。");
         editor.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         editor.setImeOptions(EditorInfo.IME_FLAG_NO_EXTRACT_UI | EditorInfo.IME_ACTION_NONE);
-        editor.setPadding(dp(14),dp(14),dp(14),dp(14)); editor.setMinLines(3);
-        GradientDrawable card = new GradientDrawable();
-        card.setColor(Color.rgb(255,252,247)); card.setCornerRadius(dp(14)); card.setStroke(dp(1),Color.rgb(225,210,192));
-        editor.setBackground(card);
-        LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(-1,0,1);
-        inputParams.topMargin=dp(6); inputParams.bottomMargin=dp(4);
-        layout.addView(editor,inputParams);
-        counter = label("",12,Color.GRAY); layout.addView(counter,row(-2));
-        retry = new Button(this); retry.setText("重试确认（同一条）");
-        styleAction(retry,false);retry.setOnClickListener(v -> retryPending()); layout.addView(retry,row(40));
-        LinearLayout actions = new LinearLayout(this);
-        fresh = new Button(this);fresh.setText("核对后恢复");styleAction(fresh,false);
-        layout.addView(fresh,row(40));
-        start = new Button(this);start.setText("开始输入");styleAction(start,false);
-        receive = new Button(this);receive.setText("接收");styleAction(receive,true);
-        Button options = new Button(this);options.setId(1003);options.setText("•••");styleAction(options,false);
-        options.setOnClickListener(v->showMore());
-        actions.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        actions.addView(start,new LinearLayout.LayoutParams(0,dp(44),2));
-        LinearLayout.LayoutParams receiveParams=new LinearLayout.LayoutParams(0,dp(44),1);
+        editor.setPadding(dp(12),dp(12),dp(12),dp(12));editor.setMinLines(3);
+        editor.setBackground(VoiceUiTheme.surface(this,Color.WHITE,VoiceUiTheme.BORDER,12));
+        LinearLayout.LayoutParams inputParams=new LinearLayout.LayoutParams(-1,0,1);
+        inputParams.topMargin=dp(10);editorCard.addView(editor,inputParams);
+        counter=VoiceUiTheme.text(this,"",12,VoiceUiTheme.MUTED);
+        counter.setGravity(android.view.Gravity.END);counter.setPadding(0,dp(5),0,0);
+        editorCard.addView(counter,row(-2));
+        LinearLayout.LayoutParams editorCardParams=new LinearLayout.LayoutParams(-1,0,1);
+        editorCardParams.bottomMargin=dp(10);layout.addView(editorCard,editorCardParams);
+
+        retry=VoiceUiTheme.button(this,"重试确认（同一条）",false);
+        retry.setOnClickListener(v->retryPending());layout.addView(retry,row(44));
+        fresh=VoiceUiTheme.button(this,"核对后恢复",false);
+        layout.addView(fresh,row(44));
+
+        LinearLayout actions=new LinearLayout(this);actions.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        start=VoiceUiTheme.button(this,"开始输入",true);
+        receive=VoiceUiTheme.button(this,"接收",false);
+        Button options=VoiceUiTheme.button(this,"更多",false);options.setId(1003);
+        options.setContentDescription("更多电脑输入功能");options.setOnClickListener(v->showMore());
+        actions.addView(start,new LinearLayout.LayoutParams(0,dp(48),2));
+        LinearLayout.LayoutParams receiveParams=new LinearLayout.LayoutParams(0,dp(48),1);
         receiveParams.leftMargin=dp(8);actions.addView(receive,receiveParams);
-        LinearLayout.LayoutParams optionParams=new LinearLayout.LayoutParams(dp(48),dp(44));
+        LinearLayout.LayoutParams optionParams=new LinearLayout.LayoutParams(0,dp(48),1);
         optionParams.leftMargin=dp(8);actions.addView(options,optionParams);
-        LinearLayout.LayoutParams actionParams=row(-2);actionParams.topMargin=dp(7);
-        layout.addView(actions,actionParams);
-        sendFile = new Button(this); sendFile.setText("发送文件到电脑");
+        layout.addView(actions,row(48));
+        sendFile=new Button(this);sendFile.setText("发送文件到电脑");
         inputRoot=layout;setContentView(layout);
         loading=true; editor.setText(draft); editor.setSelection(editor.length()); loading=false;
         editor.setEditObserver(this::edited);
@@ -598,6 +705,11 @@ public class MainActivity extends Activity {
     }
     private void toggleStart() {
         if (destroyed || !resumed) return;
+        if (reconnecting) {
+            pauseLocal(); save();
+            say("已停止重连 · 本条文字仍保留，核对电脑后再处理",false);
+            return;
+        }
         if (tracker.isActive()) {
             pauseLocal(); save();
             say(busy ? "已暂停后续输入；已发出的这条请求仍可能完成，请等待确认。" : "已暂停 · 再次开始时会重新确认电脑窗口",false);
@@ -1017,6 +1129,8 @@ public class MainActivity extends Activity {
     }
     @Override public void onDestroy() {
         if(historyScreen!=null)historyScreen.destroy();
-        destroyed=true; clearQueuedReceive(); handler.removeCallbacksAndMessages(null); worker.shutdown(); super.onDestroy();
+        destroyed=true; clearQueuedReceive(); handler.removeCallbacksAndMessages(null); worker.shutdown();
+        if (history != null) history.close();
+        super.onDestroy();
     }
 }

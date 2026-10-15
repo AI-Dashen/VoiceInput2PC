@@ -55,11 +55,41 @@ public final class InputSessionTest {
         equal(false, session.compose(generation, "bad"), "typing cannot mutate active recording session");
     }
 
+
+    private static void previewCanResumeWithoutCommitting() {
+        InputSession session = new InputSession();
+        long first = session.begin("android-current-field", "app", 1, 1).generation;
+        check(session.startListening(first), "first segment listens");
+        check(session.startRecognizing(first), "first segment recognizes");
+        check(session.showPreview(first, "第一段"), "first segment preview");
+        check(session.updatePreview(first, "第一段已修改"), "edited preview retained");
+        InputSession.Identity resumed = session.resumeListening(first);
+        check(resumed != null, "preview resumes recording");
+        check(resumed.generation != first, "resume advances generation");
+        equal("第一段已修改", session.preview(), "resume retains editable draft");
+        equal(false, session.showPreview(first, "迟到结果"), "old segment callback is stale");
+        check(session.startRecognizing(resumed.generation), "second segment recognizes");
+        check(session.showPreview(resumed.generation, "第一段已修改第二段"), "combined preview accepted");
+        equal("第一段已修改第二段", session.commit(resumed.generation), "all segments commit once");
+    }
+
+    private static void failedContinuationRestoresPriorDraft() {
+        InputSession session = new InputSession();
+        long first = session.begin("android-current-field", "app", 1, 1).generation;
+        session.startListening(first); session.startRecognizing(first); session.showPreview(first, "保留文字");
+        InputSession.Identity resumed = session.resumeListening(first);
+        check(session.restorePreview(resumed.generation, "保留文字"), "failed segment restores draft");
+        equal(InputSession.State.PREVIEW, session.state(), "restored draft is editable");
+        equal("保留文字", session.preview(), "prior draft survives failure");
+    }
+
     public static void main(String[] args) {
         staleCallbacksCannotCrossFields();
         previewNeedsExplicitCommit();
         cancelAndInvalidateAreTerminalForOldWork();
         compositionNeverMixesWithAudio();
+        previewCanResumeWithoutCommitting();
+        failedContinuationRestoresPriorDraft();
         System.out.println(checks + " input session checks passed");
     }
 }

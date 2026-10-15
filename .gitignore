@@ -43,3 +43,20 @@ mobile/tailcatbridge/go.sum
 # Local research inputs and generated reverse-analysis work
 .work/
 research/upstream/
+
+android/app/src/main/jniLibs/
+
+android/app/src/main/assets/local-asr/model.flute
+
+android/native-deps/
+
+# Private native inputs and generated acceptance artifacts (not source).
+/native-deps/
+/.tmp/
+/android/v08-*.xml
+/android/app/src/androidTest/assets/
+*.so
+*.aar
+*.flute
+*.pcm
+*.wav

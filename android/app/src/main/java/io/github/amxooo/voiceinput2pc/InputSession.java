@@ -46,10 +46,24 @@ public final class InputSession {
     }
 
     public synchronized boolean startListening(long generation) {
-        if (!isCurrent(generation) || state == State.LISTENING || state == State.RECOGNIZING) return false;
+        if (!isCurrent(generation) || state == State.LISTENING || state == State.RECOGNIZING
+                || state == State.PREVIEW) return false;
         preview = "";
         state = State.LISTENING;
         return true;
+    }
+
+    /**
+     * Start another speech segment without committing the existing editable draft.
+     * Advancing the generation makes every late callback from the previous segment stale.
+     */
+    public synchronized Identity resumeListening(long generation) {
+        if (!isCurrent(generation) || state != State.PREVIEW || preview.isEmpty()) return null;
+        Identity previous = identity;
+        identity = new Identity(++nextGeneration, previous.targetId, previous.packageName,
+                previous.fieldId, previous.inputType);
+        state = State.LISTENING;
+        return identity;
     }
 
     public synchronized boolean startRecognizing(long generation) {
@@ -62,6 +76,22 @@ public final class InputSession {
         if (!isCurrent(generation) || state != State.RECOGNIZING) return false;
         preview = safe(value);
         state = State.PREVIEW;
+        return true;
+    }
+
+    /** User edits only the current final preview, never a running recognizer or another field. */
+    public synchronized boolean updatePreview(long generation, String value) {
+        if (!isCurrent(generation) || state != State.PREVIEW) return false;
+        preview = safe(value);
+        return true;
+    }
+
+    /** Restore a retained draft after a resumed segment produced no usable result. */
+    public synchronized boolean restorePreview(long generation, String value) {
+        if (!isCurrent(generation)
+                || (state != State.LISTENING && state != State.RECOGNIZING)) return false;
+        preview = safe(value);
+        state = preview.isEmpty() ? State.CANCELLED : State.PREVIEW;
         return true;
     }
 

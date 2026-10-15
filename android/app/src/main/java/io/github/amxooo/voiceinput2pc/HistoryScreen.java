@@ -59,17 +59,20 @@ final class HistoryScreen {
     private TextView text(String value, int size, int color) {
         TextView v = new TextView(activity); v.setText(value); v.setTextSize(size); v.setTextColor(color); return v;
     }
-    private Button button(String value) {
-        Button b = new Button(activity); b.setText(value); b.setTextSize(13); b.setTextColor(green);
-        b.setMinWidth(0); b.setMinimumWidth(0);b.setAllCaps(false);b.setMinHeight(dp(40));
-        b.setTextColor(Color.rgb(117,79,42));b.setBackgroundTintList(null);
-        GradientDrawable background=new GradientDrawable();background.setColor(Color.rgb(255,249,242));
-        background.setCornerRadius(dp(20));background.setStroke(dp(1),Color.rgb(218,200,179));
-        b.setBackground(background);return b;
-    }
+    private Button button(String value) { return VoiceUiTheme.button(activity,value,false); }
     private EditText field(String hint) {
         EditText v = new EditText(activity); v.setSingleLine(true); v.setTextSize(14); v.setHint(hint);
-        v.setTextColor(ink); v.setInputType(android.text.InputType.TYPE_CLASS_TEXT); return v;
+        v.setTextColor(VoiceUiTheme.INK); v.setHintTextColor(Color.rgb(139,132,123));
+        v.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
+        v.setPadding(dp(12),0,dp(12),0);
+        v.setBackground(VoiceUiTheme.surface(activity,Color.WHITE,VoiceUiTheme.BORDER,12));
+        return v;
+    }
+    private LinearLayout card() {
+        LinearLayout value=new LinearLayout(activity);value.setOrientation(LinearLayout.VERTICAL);
+        value.setPadding(dp(14),dp(12),dp(14),dp(12));
+        value.setBackground(VoiceUiTheme.surface(activity,VoiceUiTheme.SURFACE,VoiceUiTheme.BORDER,16));
+        return value;
     }
     boolean isVisible() { return visible; }
     void saveState(Bundle state) {
@@ -105,8 +108,8 @@ final class HistoryScreen {
         if (destroyed) return;
         visible = true;
         LinearLayout root = new LinearLayout(activity); root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(246, 239, 230));
-        root.setPadding(dp(16), dp(12), dp(16), dp(10));
+        root.setBackgroundColor(VoiceUiTheme.PAPER);
+        root.setPadding(dp(12), dp(8), dp(12), dp(8));
         root.setOnApplyWindowInsetsListener((v, insets) -> {
             int left, top, right, bottom;
             if (Build.VERSION.SDK_INT >= 30) {
@@ -117,27 +120,39 @@ final class HistoryScreen {
                 left = insets.getSystemWindowInsetLeft(); top = insets.getSystemWindowInsetTop();
                 right = insets.getSystemWindowInsetRight(); bottom = insets.getSystemWindowInsetBottom();
             }
-            v.setPadding(dp(16) + left, dp(12) + top, dp(16) + right, dp(10) + bottom); return insets;
+            v.setPadding(dp(12) + left, dp(8) + top, dp(12) + right, dp(8) + bottom); return insets;
         });
         LinearLayout top = new LinearLayout(activity); top.setGravity(Gravity.CENTER_VERTICAL);
-        Button back = button("‹ 输入"); back.setContentDescription("返回输入，保留当前草稿");
-        back.setOnClickListener(v -> onBackPressed()); top.addView(back);
-        TextView title = text("输入历史", 21, ink); title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        top.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
-        export = button("导出"); export.setEnabled(!exporting); export.setOnClickListener(v -> chooseExport()); top.addView(export); root.addView(top);
-        TextView hint = text("稳定文本与修订 · 本机保存，不自动删除", 12, Color.rgb(115, 117, 107));
-        hint.setPadding(0, dp(6), 0, dp(6)); root.addView(hint);
-        keyword = field("搜索文字"); keyword.setId(2701); keyword.setText(restoredKeyword == null ? query : restoredKeyword); restoredKeyword = null; root.addView(keyword);
+        Button back = button("返回"); back.setContentDescription("返回电脑输入，保留当前草稿");
+        back.setOnClickListener(v -> onBackPressed()); top.addView(back,new LinearLayout.LayoutParams(dp(64),dp(40)));
+        TextView title = VoiceUiTheme.title(activity,"输入历史",25);
+        LinearLayout.LayoutParams titleParams=new LinearLayout.LayoutParams(0,-2,1);titleParams.leftMargin=dp(10);
+        top.addView(title,titleParams);
+        export = button("导出"); export.setEnabled(!exporting); export.setOnClickListener(v -> chooseExport());
+        top.addView(export,new LinearLayout.LayoutParams(dp(64),dp(40))); root.addView(top);
+        TextView hint = VoiceUiTheme.text(activity,"本机保存的稳定文字与修订记录",13,VoiceUiTheme.MUTED);
+        hint.setPadding(0, dp(8), 0, dp(12)); root.addView(hint);
+
+        LinearLayout filters=card();
+        TextView filterTitle=VoiceUiTheme.text(activity,"查找记录",17,VoiceUiTheme.INK);
+        filterTitle.setTypeface(Typeface.DEFAULT,Typeface.BOLD);filters.addView(filterTitle);
+        keyword = field("搜索文字"); keyword.setId(2701); keyword.setText(restoredKeyword == null ? query : restoredKeyword); restoredKeyword = null;
+        LinearLayout.LayoutParams keywordParams=new LinearLayout.LayoutParams(-1,dp(46));keywordParams.topMargin=dp(10);filters.addView(keyword,keywordParams);
         LinearLayout dates = new LinearLayout(activity);
-        from = field("开始 YYYY-MM-DD"); from.setId(2702);
-        to = field("结束 YYYY-MM-DD"); to.setId(2703);
+        from = field("开始日期"); from.setId(2702); to = field("结束日期"); to.setId(2703);
         if (range.since != 0) from.setText(localDate(range.since));
         if (range.until != Long.MAX_VALUE) to.setText(localDate(range.until));
         if (restoredFrom != null) { from.setText(restoredFrom); restoredFrom = null; }
         if (restoredTo != null) { to.setText(restoredTo); restoredTo = null; }
-        dates.addView(from, new LinearLayout.LayoutParams(0, -2, 1)); dates.addView(to, new LinearLayout.LayoutParams(0, -2, 1)); root.addView(dates);
-        Button search = button("查询"); search.setId(2704); search.setOnClickListener(v -> search()); root.addView(search);
-        summary = text("", 13, Color.rgb(115,117,107)); summary.setPadding(0, dp(5), 0, dp(8)); root.addView(summary);
+        LinearLayout.LayoutParams dateLeft=new LinearLayout.LayoutParams(0,dp(44),1);dateLeft.rightMargin=dp(6);
+        LinearLayout.LayoutParams dateRight=new LinearLayout.LayoutParams(0,dp(44),1);dateRight.leftMargin=dp(6);
+        dates.addView(from,dateLeft);dates.addView(to,dateRight);
+        LinearLayout.LayoutParams dateParams=new LinearLayout.LayoutParams(-1,-2);dateParams.topMargin=dp(8);filters.addView(dates,dateParams);
+        Button search = VoiceUiTheme.button(activity,"查询",true); search.setId(2704); search.setOnClickListener(v -> search());
+        LinearLayout.LayoutParams searchParams=new LinearLayout.LayoutParams(-1,dp(46));searchParams.topMargin=dp(10);filters.addView(search,searchParams);
+        LinearLayout.LayoutParams filterParams=new LinearLayout.LayoutParams(-1,-2);filterParams.bottomMargin=dp(10);root.addView(filters,filterParams);
+
+        summary = VoiceUiTheme.text(activity,"",13,VoiceUiTheme.MUTED); summary.setPadding(dp(4),0,0,dp(8)); root.addView(summary);
         scroll = new ScrollView(activity); scroll.setFillViewport(true);
         entries = new LinearLayout(activity); entries.setOrientation(LinearLayout.VERTICAL); scroll.addView(entries);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
@@ -146,7 +161,10 @@ final class HistoryScreen {
         next = button("下一页"); next.setId(2706); next.setOnClickListener(v -> {
             if (!loading && hasNext) { page++; if (cursors.size() <= page) cursors.add(lastId); else cursors.set(page, lastId); loadPage(); }
         });
-        pager.addView(previous, new LinearLayout.LayoutParams(0,-2,1)); pager.addView(next,new LinearLayout.LayoutParams(0,-2,1)); root.addView(pager);
+        LinearLayout.LayoutParams previousParams=new LinearLayout.LayoutParams(0,dp(44),1);previousParams.rightMargin=dp(5);
+        LinearLayout.LayoutParams nextParams=new LinearLayout.LayoutParams(0,dp(44),1);nextParams.leftMargin=dp(5);
+        pager.addView(previous,previousParams);pager.addView(next,nextParams);
+        LinearLayout.LayoutParams pagerParams=new LinearLayout.LayoutParams(-1,-2);pagerParams.topMargin=dp(8);root.addView(pager,pagerParams);
         activity.setContentView(root); root.requestApplyInsets();
         if (cursors.isEmpty()) cursors.add(Long.MAX_VALUE);
         loadPage();
@@ -198,10 +216,10 @@ final class HistoryScreen {
     }
     private void addEntry(String[] row) {
         LinearLayout card = new LinearLayout(activity); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(12),dp(10),dp(12),dp(12));
-        GradientDrawable bg = new GradientDrawable(); bg.setColor(Color.WHITE); bg.setCornerRadius(dp(12)); bg.setStroke(dp(1),Color.rgb(230,228,220)); card.setBackground(bg);
+        card.setBackground(VoiceUiTheme.surface(activity,VoiceUiTheme.SURFACE,VoiceUiTheme.BORDER,14));
         String time = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(Long.parseLong(row[0])));
-        TextView stamp = text(time + " · " + row[5], 12, green); card.addView(stamp);
-        TextView meta = text("来源 " + row[1] + " · 修订 " + row[3] + " · 序号 " + row[7] + "\n会话 " + row[2] + "\n设备 " + (row[4].isEmpty() ? "未指定" : row[4]),11,Color.rgb(115,117,107));
+        TextView stamp = text(time + " · " + row[5], 12, VoiceUiTheme.GREEN); card.addView(stamp);
+        TextView meta = text("来源 " + row[1] + " · 修订 " + row[3] + " · 序号 " + row[7] + "\n会话 " + row[2] + "\n设备 " + (row[4].isEmpty() ? "未指定" : row[4]),11,VoiceUiTheme.MUTED);
         meta.setPadding(0,dp(6),0,dp(8)); card.addView(meta);
         TextView body = text(row[6],16,ink); body.setTextIsSelectable(true); card.addView(body);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1,-2); params.bottomMargin = dp(8); entries.addView(card,params);

@@ -10,11 +10,13 @@ import android.os.Process;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Probe-A recorder: captures no files and discards PCM after lifecycle verification. */
+/** Scoped PCM capture; user-started sessions only, no persisted recordings. */
 final class SafeAudioRecorder {
     interface Listener {
         void onStarted(long generation);
         void onProgress(long generation, long samples);
+        default void onPcm(long generation, byte[] pcm) {}
+        default void onEndpoint(long generation) {}
         void onStopped(long generation, long samples);
         void onError(long generation, String message);
     }
@@ -75,11 +77,26 @@ final class SafeAudioRecorder {
             active.startRecording();
             listener.onStarted(activeGeneration);
             short[] buffer = new short[bufferBytes / 2];
+            SpeechEndpointDetector endpoint = new SpeechEndpointDetector(SAMPLE_RATE);
             long nextReport = SAMPLE_RATE / 5;
             while (running.get() && active == recorder && activeGeneration == generation) {
                 int count = active.read(buffer, 0, buffer.length, AudioRecord.READ_BLOCKING);
                 if (count < 0) throw new IllegalStateException("AudioRecord read=" + count);
+                if(count==0)continue;
+                byte[] pcm=new byte[count*2];
+                for(int i=0;i<count;i++){pcm[i*2]=(byte)buffer[i];pcm[i*2+1]=(byte)(buffer[i]>>8);}
+                listener.onPcm(activeGeneration,pcm);
                 samples += count;
+                SpeechEndpointDetector.Decision decision=endpoint.accept(buffer,count);
+                if (decision == SpeechEndpointDetector.Decision.NO_SPEECH_TIMEOUT) {
+                    listener.onError(activeGeneration,"8秒内未听到有效语音");
+                    break;
+                }
+                if (decision == SpeechEndpointDetector.Decision.END_OF_SPEECH
+                        || decision == SpeechEndpointDetector.Decision.MAX_DURATION) {
+                    listener.onEndpoint(activeGeneration);
+                    break;
+                }
                 if (samples >= nextReport) {
                     listener.onProgress(activeGeneration, samples);
                     nextReport = samples + SAMPLE_RATE / 5;

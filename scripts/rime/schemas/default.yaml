@@ -1,0 +1,21 @@
+config_version: '0.8.1'
+schema_list:
+  - schema: rime_ice
+  - schema: t9
+  - schema: rime_ice_private
+  - schema: t9_private
+menu:
+  page_size: 7
+switcher:
+  caption: 中文
+  hotkeys: []
+
+ascii_composer:
+  good_old_caps_lock: true
+  switch_key:
+    Shift_L: noop
+    Shift_R: noop
+    Control_L: noop
+    Control_R: noop
+    Caps_Lock: clear
+    Eisu_toggle: clear
