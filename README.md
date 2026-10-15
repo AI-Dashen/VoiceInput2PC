@@ -11,16 +11,16 @@
 | 版本 | 定位 | 入口 |
 | --- | --- | --- |
 | **0.7.0-testing** | 可下载的最新测试版；含 Android APK 与 Windows ZIP，不内置离线识别包 | [打开0.7下载页](https://github.com/AI-Dashen/VoiceInput2PC/releases/tag/v0.7.0-testing) |
-| **0.8 输入法开发** | 真正的 Android 系统输入法路线；远端 Probe A 与本机后续代码状态分开 | [查看输入法介绍](docs/INPUT_METHOD.md) · [开发分支](https://github.com/AI-Dashen/VoiceInput2PC/tree/feature/universal-input-v08) |
+| **0.8 输入法开发** | 真正的 Android 系统输入法路线；最新自有IME源码已同步0.8开发分支 | [查看输入法介绍](docs/INPUT_METHOD.md) · [开发分支](https://github.com/AI-Dashen/VoiceInput2PC/tree/feature/universal-input-v08) |
 | 0.6.1 | 上一个非预发布版本，因此 GitHub仍标记为 Latest | [历史稳定版](https://github.com/AI-Dashen/VoiceInput2PC/releases/tag/v0.6.1) |
 
 ### 输入法是主体，跨设备传字是其中功能
 
-0.7 解决手机文字送达电脑的问题；0.8把产品推进为同一 APK 内的系统输入法，围绕语音、九宫格、26键与输出目标统一输入会话。本机 `0.8.0-local-input` 的完整后续改动尚未提交，远端分支目前是 `0.8.0-probe-a`，不能混称为完整源码已交付。
+0.7 解决手机文字送达电脑的问题；0.8把产品推进为同一 APK 内的系统输入法，围绕语音、九宫格、26键与输出目标统一输入会话。最新 `0.8.0-local-input` 开发源码已同步到 `feature/universal-input-v08`（提交 `4205677`），包含IME、中文引擎、语音状态和跨设备输出。闭源模型及运行库未公开，不等于完整离线识别发行包。
 
 ![0.8 输入法结构示意](docs/assets/input-method-roadmap.png)
 
-[输入法的架构、当前代码状态与源码交付缺口](docs/INPUT_METHOD.md)
+[输入法架构、最新源码与依赖说明](docs/INPUT_METHOD.md)
 
 ## 0.7 跨设备文字链路
 

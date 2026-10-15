@@ -13,8 +13,8 @@
 | 交付 | 当前真实状态 | 获取入口 |
 | --- | --- | --- |
 | 0.7.0-testing | 2026-10-13 发布的测试版，有 Android APK、Windows ZIP 和 SHA256SUMS；不内置本地语音识别包 | [0.7 测试版下载](https://github.com/AI-Dashen/VoiceInput2PC/releases/tag/v0.7.0-testing) |
-| 0.8.0-probe-a | 远端 `feature/universal-input-v08`，提交 `4862a2f`；已有 IME 服务声明与 Probe A 验证资料 | [输入法开发分支](https://github.com/AI-Dashen/VoiceInput2PC/tree/feature/universal-input-v08) |
-| 0.8.0-local-input | 本机开发工作树中的后续版本，versionCode 10；含未提交的新界面、中文引擎和本地 ASR 适配等改动 | 尚未作为完整源码或正式 Release 上传；不能从 Probe A 分支下载到全部本机代码 |
+| 0.8.0-probe-a | 历史提交 `4862a2f`；本次源码同步前的早期 Probe A | [输入法开发分支](https://github.com/AI-Dashen/VoiceInput2PC/tree/feature/universal-input-v08) |
+| 0.8.0-local-input | 本次已同步到 `feature/universal-input-v08`，versionCode 10；含新界面、中文引擎和本地 ASR 适配源码 | [查看本次0.8开发源码](https://github.com/AI-Dashen/VoiceInput2PC/tree/feature/universal-input-v08)；未发布包含私有识别组件的完整APK |
 
 GitHub 的 `/releases/latest` 当前指向 **0.6.1**，因为 **0.7 是预发布**。这是发布频道区别，不代表0.7不存在。本项目不把尚未完成全部验收的测试版改标为稳定版。
 
@@ -30,7 +30,7 @@ Android 通过 `InputMethodService` 挂接系统输入框，最终文字经当�
 - **防卡与草稿恢复**：识别超时、错误、取消、输入方式切换、新编辑器切换都有明确状态规则，保留有效草稿并拒绝旧 generation 回调。
 - **输出目标**：`OutputTargetController` 将本机上屏和受信任电脑草稿区分；远端发送等待回执，结果未知时使用相同请求 ID 重试。
 
-这些是当前本机源码检查确认的结构。远端 Probe A 的实际覆盖更小，不能将上述清单全部视为 GitHub 已交付内容。
+这些是当前本机源码检查确认的结构。本次已将上述自有源码同步到0.8开发分支；历史 Probe A 提交覆盖较小，不能与最新分支混用。
 
 ## 哪些不会随介绍自动公开
 
@@ -40,6 +40,6 @@ Android 通过 `InputMethodService` 挂接系统输入框，最终文字经当�
 
 `oneplus-offline-voice-input` 是此前基于 FUTO 源码的个人改造实验，用于保留旧路线记录。本仓库的0.8是自有 IME 产品路线；两者的代码状态、许可证及识别能力不混用。
 
-## 后续源码交付缺口
+## 源码交付与依赖边界
 
-需要单独整理本机未提交的0.8代码，列明可公开源码、可再获取依赖、测试证据和构建前提，再同步到开发分支。本次只纠正文档与项目展示，不将尚未公开的完整版本冒充已发布。
+自有输入法源码、JNI适配、测试、Rime构建脚本和依赖许可证已同步到0.8开发分支。闭源识别模型和运行库未上传；源码可检查，不代表克隆后即可运行完整离线ASR。构建前提和本次实际测试见开发分支的 `docs/v0.8/SOURCE_DELIVERY_2026-10-15.md`。
