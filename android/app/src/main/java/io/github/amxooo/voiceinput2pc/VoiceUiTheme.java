@@ -11,15 +11,15 @@ import android.widget.TextView;
 
 /** Shared visual language for the app-owned management and transfer screens. */
 final class VoiceUiTheme {
-    static final int PAPER = Color.rgb(246, 239, 230);
-    static final int SURFACE = Color.rgb(255, 252, 247);
-    static final int INK = Color.rgb(39, 34, 29);
-    static final int MUTED = Color.rgb(105, 101, 94);
-    static final int BROWN = Color.rgb(117, 79, 42);
-    static final int GREEN = Color.rgb(22, 112, 91);
-    static final int BORDER = Color.rgb(225, 210, 192);
-    static final int SOFT_GREEN = Color.rgb(229, 238, 233);
-    static final int SOFT_BROWN = Color.rgb(241, 231, 219);
+    static final int PAPER = Color.rgb(247, 250, 247);
+    static final int SURFACE = Color.WHITE;
+    static final int INK = Color.rgb(28, 39, 35);
+    static final int MUTED = Color.rgb(103, 117, 109);
+    static final int BROWN = Color.rgb(41, 91, 46);
+    static final int GREEN = Color.rgb(44, 117, 48);
+    static final int BORDER = Color.rgb(224, 232, 224);
+    static final int SOFT_GREEN = Color.rgb(234, 248, 229);
+    static final int SOFT_BROWN = Color.rgb(240, 245, 237);
 
     private VoiceUiTheme() {}
 
@@ -53,8 +53,8 @@ final class VoiceUiTheme {
     static LinearLayout card(Context context) {
         LinearLayout result = new LinearLayout(context);
         result.setOrientation(LinearLayout.VERTICAL);
-        result.setPadding(dp(context, 16), dp(context, 14), dp(context, 16), dp(context, 14));
-        result.setBackground(surface(context, SURFACE, BORDER, 18));
+        result.setPadding(dp(context, 12), dp(context, 10), dp(context, 12), dp(context, 10));
+        result.setBackground(surface(context, SURFACE, BORDER, 10));
         return result;
     }
 
@@ -69,9 +69,10 @@ final class VoiceUiTheme {
         result.setMinimumHeight(0);
         result.setPadding(dp(context, 12), 0, dp(context, 12), 0);
         result.setTextColor(primary ? Color.WHITE : BROWN);
+        result.setStateListAnimator(null);
         result.setBackgroundTintList(null);
         result.setBackground(surface(context, primary ? BROWN : SURFACE,
-                primary ? 0 : BORDER, 22));
+                primary ? 0 : BORDER, 9));
         return result;
     }
 

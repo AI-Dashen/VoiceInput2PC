@@ -76,8 +76,8 @@ public class MainActivity extends Activity {
         b.setMinHeight(0); b.setMinimumHeight(0); b.setPadding(dp(8),0,dp(8),0);
         b.setTextColor(primary ? Color.WHITE : brown);
         b.setBackgroundTintList(null);
-        b.setBackground(surface(primary ? brown : Color.rgb(255,249,242),
-                primary ? 0 : Color.rgb(218,200,179),22));
+        b.setBackground(surface(primary ? brown : VoiceUiTheme.SURFACE,
+                primary ? 0 : VoiceUiTheme.BORDER,9));
     }
     private LinearLayout sectionCard() { return VoiceUiTheme.card(this); }
 
@@ -98,19 +98,10 @@ public class MainActivity extends Activity {
     }
 
     private void showHistory() {
-        if (busy) { say("请等待当前请求完成后查看历史。", true); return; }
-        if (tracker != null) { pauseLocal(); if (!save()) return; }
-        final View retained = inputRoot;
-        if (historyScreen != null) historyScreen.destroy();
-        historyScreen = new HistoryScreen(this, history, () -> {
-            setContentView(retained);
-            if (tracker != null) {
-                updateControls(); say("已暂停 · 草稿已保留，点开始继续", false);
-            }
-        });
-        ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(
-                getWindow().getDecorView().getWindowToken(),0);
-        historyScreen.show();
+        if(busy){say("请等待当前请求完成后查看记录。",true);return;}
+        if(tracker!=null){pauseLocal();if(!save())return;}
+        Intent intent=new Intent(this,HomeActivity.class).putExtra(HomeActivity.EXTRA_SECTION,"history");
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(intent);
     }
     private void showDevices() {
         if (!canChangeConnection()) return;
@@ -217,7 +208,7 @@ public class MainActivity extends Activity {
             showTypingScreen(pairing);
         }
         if (savedInstanceState != null && savedInstanceState.getBoolean("history_visible",false)) {
-            showHistory(); historyScreen.restoreState(savedInstanceState); historyScreen.show();
+            showHistory();
         } else if (getIntent().getBooleanExtra(EXTRA_OPEN_HISTORY,false)) {
             getIntent().removeExtra(EXTRA_OPEN_HISTORY);
             showHistory();

@@ -2,6 +2,9 @@ package io.github.amxooo.voiceinput2pc;
 
 /** Pure keyboard state. The host controls InputConnection and asynchronous speech. */
 public final class KeyboardController {
+    /** Keep only one short phrase in Rime's ambiguous T9 search window. */
+    public static final int T9_NO_MATCH_RECOVERY_CODE_LENGTH = 8;
+    public static final int T9_ROLLOVER_CODE_LENGTH = 16;
     public enum Mode { PINYIN, T9, ENGLISH, NUMBERS, SYMBOLS }
     private final ChineseInputEngine engine;
     private Mode mode = Mode.PINYIN;
@@ -18,6 +21,10 @@ public final class KeyboardController {
     public void toggleCase() { uppercase = !uppercase; }
     /** Null means composition only. Non-Chinese keys are committed by the host. */
     public String type(String key) {
+        return type(key,null);
+    }
+    /** Reuses a state already read by the host for this same key event. */
+    public String type(String key,ChineseInputEngine.Snapshot current) {
         if (chinese()) {
             if (key == null || key.length() != 1) return "";
             char value=key.charAt(0);
@@ -25,13 +32,51 @@ public final class KeyboardController {
                     ? (value >= '2' && value <= '9') || value == '\''
                     : (value >= 'a' && value <= 'z') || value == '\'';
             if (!composingKey) return key;
-            if (!engine.snapshot().available) return null;
+            if (!(current == null ? engine.snapshot() : current).available) return null;
             engine.input(value);
             return null;
         }
         return mode == Mode.ENGLISH && uppercase ? key.toUpperCase(java.util.Locale.ROOT) : key;
     }
+    public boolean t9LimitReached() {
+        return t9LimitReached(null);
+    }
+    public boolean t9LimitReached(ChineseInputEngine.Snapshot current) {
+        if (mode != Mode.T9) return false;
+        ChineseInputEngine.Snapshot state=current == null ? engine.snapshot() : current;
+        return state.numericInput.length() >= T9_ROLLOVER_CODE_LENGTH;
+    }
+    /**
+     * A long lookup with no real candidate is not useful user text. Recover on
+     * the next key instead of leaving an invisible composition that can only be
+     * escaped by deleting every digit.
+     */
+    public boolean t9NoMatchRecoveryNeeded() {
+        return t9NoMatchRecoveryNeeded(null);
+    }
+    public boolean t9NoMatchRecoveryNeeded(ChineseInputEngine.Snapshot current) {
+        if (mode != Mode.T9) return false;
+        ChineseInputEngine.Snapshot state=current == null ? engine.snapshot() : current;
+        return state.numericInput.length() >= T9_NO_MATCH_RECOVERY_CODE_LENGTH
+                && firstCommittableCandidateIndex(state) < 0;
+    }
+    public boolean isT9ComposingKey(String key) {
+        if (mode != Mode.T9 || key == null || key.length() != 1) return false;
+        char value=key.charAt(0);
+        return (value >= '2' && value <= '9') || value == '\'';
+    }
     public ChineseInputEngine.Snapshot snapshot() { return engine.snapshot(); }
+    /** T9 digits are private lookup codes, never user-visible candidates. */
+    public boolean displayableCandidate(String candidate) {
+        if (candidate == null || candidate.isEmpty()) return false;
+        return mode != Mode.T9 || !candidate.matches(".*[0-9].*");
+    }
+    public int firstCommittableCandidateIndex(ChineseInputEngine.Snapshot state) {
+        if (state == null) return -1;
+        for (int i=0;i<state.candidates.size();i++)
+            if (displayableCandidate(state.candidates.get(i))) return i;
+        return -1;
+    }
     /**
      * Text safe to expose to the editor while composition is in progress.
      * T9 digits are an internal lookup code and must never appear in the host
@@ -39,15 +84,50 @@ public final class KeyboardController {
      */
     public String displayComposition(ChineseInputEngine.Snapshot state) {
         if (state == null) return "";
-        if (mode == Mode.T9)
-            return state.candidates.isEmpty() ? "" : state.candidates.get(0);
+        if (mode == Mode.T9) {
+            int index=firstCommittableCandidateIndex(state);
+            return index < 0 ? "" : state.candidates.get(index);
+        }
         return state.rawInput;
+    }
+    /** Keyboard-panel explanation only; never pass this string to the editor. */
+    public String displayPreedit(ChineseInputEngine.Snapshot state) {
+        if (state == null) return "";
+        if (mode == Mode.T9 && !state.candidateComments.isEmpty()) {
+            String spelling=state.candidateComments.get(0);
+            if (spelling != null && !spelling.trim().isEmpty()) {
+                int selectedEnd=Math.max(0,Math.min(state.selectionStart,state.preedit.length()));
+                String prefix=state.preedit.substring(0,selectedEnd);
+                return hideT9LookupDigits(prefix+spelling);
+            }
+        }
+        String value=state.preedit.isEmpty() ? state.rawInput : state.preedit;
+        // A T9 lookup can temporarily have no dictionary match. Keep its digits
+        // inside the decoder instead of flashing them as if they were typed text,
+        // but still make the live state visible so it cannot look frozen.
+        if (mode == Mode.T9) {
+            String safe=hideT9LookupDigits(value);
+            return safe.isEmpty() && !state.numericInput.isEmpty() ? "继续输入或删除" : safe;
+        }
+        return value;
+    }
+    private static String hideT9LookupDigits(String value) {
+        if (value == null || value.isEmpty()) return "";
+        if (value.matches("[0-9'\\s]+")) return "";
+        return value.replaceAll("[0-9]+", "…").replaceAll("'{2,}", "'");
     }
     public String select(int index) {
         if (!chinese()) return null;
         ChineseInputEngine.Snapshot state = engine.snapshot();
         if (index < 0 || index >= state.candidates.size()) return null;
         return engine.select(index);
+    }
+    public void setLearningEnabled(boolean enabled) { engine.setLearningEnabled(enabled); }
+    public boolean activateSyllable(int index) {
+        return mode == Mode.T9 && engine.activateSyllable(index);
+    }
+    public boolean chooseSyllable(String syllable) {
+        return mode == Mode.T9 && engine.chooseSyllable(syllable);
     }
     public void reset() { engine.reset(); }
     public void backspace() { engine.backspace(); }

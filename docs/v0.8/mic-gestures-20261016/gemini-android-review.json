@@ -1,0 +1,17 @@
+{
+  "text": "Gemini 说\n\n作为Android输入法工程与视觉顾问，现针对Android 16下该IME语音与交互架构进行独立合规审查：\n\n跨线程边界与过期Selection陷阱：\n\n官方允许：InputConnection（IC）允许在异步/工作线程调用，但宿主App的主线程可能延迟响应。\n\n过期陷阱：异步返回的检测结果若仅凭旧 selection revision 过滤，易导致光标已移动后仍应用了基于过时邻域（如1个前置字符）的修改。必须将 binding generation 与单调递增的事务序列号强绑定，任何世代不符的异步回调必须直接丢弃，且严禁将 UNKNOWN 状态等同于空。\n\n手势仲裁与冲突消解：\n\n多路复用风险：单击（起停）、双击（切键盘）、长按前上滑（标点插入/取消）、静止长按（拖动）在128dp窄窗口内极易冲突。\n\n仲裁策略：必须基于时间阈值与位移向量（Slop）建立严格的状态机。以“静止长按”触发拖动前，必须先决条件式锁定触摸：未达长按时间阈值前的移动应判定为手势取消或滑动手势，严禁边长按边拖动，且长按上滑松手必须精准捕获释放瞬时的坐标矢量来判定标点插入或取消。\n\n焦点/光标可见性与无感输入：\n\n保持焦点与防唤醒：直接输入宿主而不重复草稿时，绝对不能盲目调用 setSelection() 或通过无谓的删字动作来强行唤醒输入法焦点，这会直接导致宿主滚动视图跳动或软键盘重绘。\n\n实机验证要求：依赖 InputConnection#getCursorCapsMode 与原生异步插入，不读取用户正文，不操作其他App。官方API允许的异步调用与在特定定制系统（如Android 16）上的真实时延表现差异巨大，必须通过真机多应用实测验证无障碍焦点丢失率。",
+  "busy": false,
+  "modelLabels": [
+    "Gemini\nFlash-Lite"
+  ],
+  "complete": true,
+  "channel": "Gemini website CDP",
+  "accountVerified": "cooocvc@gmail.com",
+  "codex_review": {
+    "rejected": [
+      "128dp window assertion is stale; current voice viewport 280dp.",
+      "getCursorCapsMode reports capitalization mode, not input focus or cursor visibility; must not use it as caret diagnostic."
+    ],
+    "qualification": "Background InputConnection calls depend on concrete remote proxy versus local EditableInputConnection implementation. Result is advice, not official API verification or device evidence."
+  }
+}

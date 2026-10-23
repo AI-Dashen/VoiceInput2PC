@@ -25,11 +25,11 @@ android {
         applicationId 'io.github.amxooo.voiceinput2pc'
         minSdk 26
         targetSdk 35
-        versionCode 10
-        versionName '0.8.0-local-input'
+        versionCode 42
+        versionName '0.8.32-t9-segment'
         testInstrumentationRunner 'android.test.InstrumentationTestRunner'
     }
-    aaptOptions { noCompress "flute" }
+    aaptOptions { noCompress "flute", "mnn", "weight", "bin", "txt" }
     packagingOptions { jniLibs { useLegacyPackaging true } }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -48,7 +48,7 @@ android {
     sourceSets.main.assets.exclude("pairing.json")
     buildTypes {
         debug {
-            applicationIdSuffix providers.gradleProperty("qaPackageSuffix").getOrElse(".v08probe")
+            applicationIdSuffix providers.gradleProperty("qaPackageSuffix").getOrElse("")
             resValue 'string', 'app_name', '万能输入法'
         }
         release {

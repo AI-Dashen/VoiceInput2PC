@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-19T20:27:07.242000+08:00",
+  "memory_kib": {
+    "MemTotal": 15475008,
+    "MemAvailable": 2285100,
+    "SwapTotal": 9961468,
+    "SwapFree": 1801724
+  },
+  "app_process_status": [
+    "Name:\to.voiceinput2pc",
+    "State:\tS (sleeping)",
+    "VmHWM:\t  247604 kB",
+    "VmRSS:\t  159584 kB",
+    "Threads:\t32",
+    "Name:\tut2pc:local_asr",
+    "State:\tS (sleeping)",
+    "VmHWM:\t 1636976 kB",
+    "VmRSS:\t 1241884 kB",
+    "Threads:\t15"
+  ],
+  "duplicate_process_observed": false,
+  "root_cause": "UNCONFIRMED",
+  "ui_main_thread_observed": "do_epoll_wait",
+  "asr_worker_observed": "futex_wait_queue",
+  "recent_app_log": "AudioRecord start/stop success; repeated handleResized abandoned; no FATAL/ANR/OOM found in queried app buffer",
+  "restarted": false
+}

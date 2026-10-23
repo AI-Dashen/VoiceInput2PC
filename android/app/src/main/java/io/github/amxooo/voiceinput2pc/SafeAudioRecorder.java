@@ -16,12 +16,14 @@ final class SafeAudioRecorder {
         void onStarted(long generation);
         void onProgress(long generation, long samples);
         default void onPcm(long generation, byte[] pcm) {}
+        default void onSpeechDetected(long generation) {}
         default void onEndpoint(long generation) {}
         void onStopped(long generation, long samples);
         void onError(long generation, String message);
     }
 
     private static final int SAMPLE_RATE = 16000;
+    private static final int PRE_ROLL_BYTES = SAMPLE_RATE * 2 * 300 / 1000;
     private final Context context;
     private final Listener listener;
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -35,15 +37,20 @@ final class SafeAudioRecorder {
     }
 
     synchronized boolean start(long requestedGeneration) {
-        if (running.get()) return false;
+        if (running.get() || recorder != null || thread != null) return false;
         if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             listener.onError(requestedGeneration, "请先在万能输入法设置中授权麦克风");
             return false;
         }
+        if (!MicrophoneLease.tryAcquire("ime-voice")) {
+            listener.onError(requestedGeneration,"录音机正在使用麦克风，请先结束录音");
+            return false;
+        }
         int minimum = AudioRecord.getMinBufferSize(SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
         if (minimum <= 0) {
+            MicrophoneLease.release("ime-voice");
             listener.onError(requestedGeneration, "设备未提供可用的录音缓冲区");
             return false;
         }
@@ -54,11 +61,13 @@ final class SafeAudioRecorder {
                     SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO,
                     AudioFormat.ENCODING_PCM_16BIT, bufferBytes);
         } catch (RuntimeException error) {
+            MicrophoneLease.release("ime-voice");
             listener.onError(requestedGeneration, "无法创建本地录音：" + error.getClass().getSimpleName());
             return false;
         }
         if (created.getState() != AudioRecord.STATE_INITIALIZED) {
             created.release();
+            MicrophoneLease.release("ime-voice");
             listener.onError(requestedGeneration, "设备端录音不可用");
             return false;
         }
@@ -78,6 +87,8 @@ final class SafeAudioRecorder {
             listener.onStarted(activeGeneration);
             short[] buffer = new short[bufferBytes / 2];
             SpeechEndpointDetector endpoint = new SpeechEndpointDetector(SAMPLE_RATE);
+            java.util.ArrayDeque<byte[]> preRoll=new java.util.ArrayDeque<>();
+            int preRollBytes=0;boolean forwarding=false;
             long nextReport = SAMPLE_RATE / 5;
             while (running.get() && active == recorder && activeGeneration == generation) {
                 int count = active.read(buffer, 0, buffer.length, AudioRecord.READ_BLOCKING);
@@ -85,11 +96,19 @@ final class SafeAudioRecorder {
                 if(count==0)continue;
                 byte[] pcm=new byte[count*2];
                 for(int i=0;i<count;i++){pcm[i*2]=(byte)buffer[i];pcm[i*2+1]=(byte)(buffer[i]>>8);}
-                listener.onPcm(activeGeneration,pcm);
                 samples += count;
                 SpeechEndpointDetector.Decision decision=endpoint.accept(buffer,count);
+                if(!forwarding){
+                    preRoll.addLast(pcm);preRollBytes+=pcm.length;
+                    while(preRollBytes>PRE_ROLL_BYTES&&preRoll.size()>1)preRollBytes-=preRoll.removeFirst().length;
+                    if(endpoint.speechSeen()){
+                        forwarding=true;listener.onSpeechDetected(activeGeneration);
+                        while(!preRoll.isEmpty())listener.onPcm(activeGeneration,preRoll.removeFirst());
+                        preRollBytes=0;
+                    }
+                }else listener.onPcm(activeGeneration,pcm);
                 if (decision == SpeechEndpointDetector.Decision.NO_SPEECH_TIMEOUT) {
-                    listener.onError(activeGeneration,"8秒内未听到有效语音");
+                    listener.onError(activeGeneration,"5秒内未听到有效语音");
                     break;
                 }
                 if (decision == SpeechEndpointDetector.Decision.END_OF_SPEECH
@@ -109,7 +128,7 @@ final class SafeAudioRecorder {
         } finally {
             try { if (active.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) active.stop(); }
             catch (RuntimeException ignored) {}
-            active.release();
+            try { active.release(); } catch (RuntimeException ignored) {}
             synchronized (this) {
                 if (recorder == active) {
                     recorder = null;
@@ -117,6 +136,7 @@ final class SafeAudioRecorder {
                     running.set(false);
                 }
             }
+            MicrophoneLease.release("ime-voice");
             listener.onStopped(activeGeneration, samples);
         }
     }
@@ -130,5 +150,6 @@ final class SafeAudioRecorder {
     }
 
     boolean isRunning() { return running.get(); }
+    boolean isIdle() { return !running.get() && recorder == null && thread == null; }
     static int sampleRate() { return SAMPLE_RATE; }
 }

@@ -95,6 +95,25 @@ public final class InputSession {
         return true;
     }
 
+    /** Cancel the asynchronous producer while retaining an editable draft. */
+    public synchronized Identity interruptToDraft(long generation, String value) {
+        if (!isCurrent(generation)) return null;
+        Identity previous=identity;
+        identity=new Identity(++nextGeneration,previous.targetId,previous.packageName,
+                previous.fieldId,previous.inputType);
+        preview=safe(value);
+        state=preview.isEmpty() ? State.IDLE : State.PREVIEW;
+        return identity;
+    }
+
+    /** A decoder selection whose target rejected the write remains recoverable. */
+    public synchronized boolean retainRejectedCommit(long generation, String value) {
+        if (!isCurrent(generation) || state == State.LISTENING || state == State.RECOGNIZING) return false;
+        preview=safe(value);
+        state=State.PREVIEW;
+        return true;
+    }
+
     public synchronized String commit(long generation) {
         if (!isCurrent(generation) || (state != State.COMPOSING && state != State.PREVIEW)
                 || preview.isEmpty()) return null;

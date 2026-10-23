@@ -1,27 +1,18 @@
 package io.github.amxooo.voiceinput2pc;
 
+import android.content.Intent;
 import android.test.ActivityInstrumentationTestCase2;
 import android.view.View;
 import android.widget.Button;
 
-public final class ImeSettingsActivityTest extends ActivityInstrumentationTestCase2<ImeSettingsActivity> {
-    public ImeSettingsActivityTest(){super(ImeSettingsActivity.class);}
-
-    public void testSettingsActionsRemainReachableAndCaptureVisual() throws Exception {
-        ImeSettingsActivity activity=getActivity();getInstrumentation().waitForIdleSync();
-        float density=activity.getResources().getDisplayMetrics().density;
-        for(int id:new int[]{3201,3202,3203}) {
-            View view=activity.findViewById(id);
-            assertNotNull("Missing settings action "+id,view);
-            assertTrue(view instanceof Button);
-            assertTrue("Settings action is shorter than 48dp",view.getLayoutParams().height>=48*density);
-        }
-        android.graphics.Bitmap bitmap=getInstrumentation().getUiAutomation().takeScreenshot();
-        assertNotNull(bitmap);
-        java.io.File file=new java.io.File(getInstrumentation().getTargetContext().getCacheDir(),"settings-redesign.png");
-        try(java.io.FileOutputStream out=new java.io.FileOutputStream(file)) {
-            assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out));
-        }
-        assertTrue(file.isFile()&&file.length()>0);
+/** Settings live inside the management page; no duplicate permissions screen. */
+public final class ImeSettingsActivityTest extends ActivityInstrumentationTestCase2<HomeActivity> {
+    public ImeSettingsActivityTest(){super(HomeActivity.class);}
+    public void testSettingsSectionIntentKeepsActionsInOnePage()throws Throwable {
+        setActivityIntent(new Intent().putExtra(HomeActivity.EXTRA_SECTION,"settings"));
+        HomeActivity a=getActivity();getInstrumentation().waitForIdleSync();
+        assertEquals(View.VISIBLE,((View)a.findViewById(3102).getParent()).getVisibility());
+        for(int id:new int[]{3201,3101,3102,3110})assertTrue(a.findViewById(id) instanceof Button);
+        assertNotNull(a.findViewById(2701));assertNotNull(a.findViewById(2710));
     }
 }

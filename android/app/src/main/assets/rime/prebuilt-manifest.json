@@ -1,0 +1,58 @@
+{
+  "format": "librime-prebuilt",
+  "engine": "1.17.0",
+  "source_commit": "da1fbe602e38f26db846fa10120ee64c2b0324c0",
+  "files": [
+    {
+      "path": "build/default.yaml",
+      "bytes": 465,
+      "sha256": "914d409664aad898f8426b948023d6329268c9b5935e6f288f97967c14c3283f"
+    },
+    {
+      "path": "build/rime_ice.prism.bin",
+      "bytes": 22664,
+      "sha256": "00371b6653f97cedc6270e1c6fece917fd1a99d8fcdb4e522468f071dff9c390"
+    },
+    {
+      "path": "build/rime_ice.reverse.bin",
+      "bytes": 57524,
+      "sha256": "072f3df08829d5b4d01d151b730e2189a65f05269ee819cd86c154c179a8c83c"
+    },
+    {
+      "path": "build/rime_ice.schema.yaml",
+      "bytes": 1142,
+      "sha256": "2d8bd694471aec14982babf9a413d89e8116a7dee2c312f1a6effb364c35f863"
+    },
+    {
+      "path": "build/rime_ice.table.bin",
+      "bytes": 60656260,
+      "sha256": "c72cf853efcfa4370bd003d7bbd4e327dc9b5e46687ea24a4e32be4f412fef17"
+    },
+    {
+      "path": "build/rime_ice_private.schema.yaml",
+      "bytes": 1185,
+      "sha256": "002aaa5e7bf32b794f2ea75f410630fafd21ee31a06c7cd59cd1f18ba1abf9f7"
+    },
+    {
+      "path": "build/t9.prism.bin",
+      "bytes": 104864,
+      "sha256": "78b4b0f9c6154f140b8e0590d2f83d61b8ce281135a0000f98de9373c284398f"
+    },
+    {
+      "path": "build/t9.schema.yaml",
+      "bytes": 1250,
+      "sha256": "21d4d6b24169705072ed952cae2f478abfe0a6681c6880a04748114e59a294af"
+    },
+    {
+      "path": "build/t9_private.schema.yaml",
+      "bytes": 1275,
+      "sha256": "baff1a1a7a122d65e9024d07291092e307f7abdac5421b403f751930287cc92d"
+    }
+  ],
+  "t9_spelling_version": "0.8.2",
+  "syllable_index": {
+    "path": "t9-syllables.txt",
+    "count": 419,
+    "sha256": "0ffc839f02f3f4a804c86eea9a3838ad9a565aa966010e2593ff1d7c57f8d6fe"
+  }
+}

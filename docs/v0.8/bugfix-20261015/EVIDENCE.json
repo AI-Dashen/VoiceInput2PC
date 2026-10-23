@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-15",
+  "status": "CODE_COMPLETE_BUILD_TESTED_DEVICE_PENDING",
+  "screenshots": [
+    "Screenshot_2026-10-15-21-26-11-09_84d3000e3f4017145260f7618db1d683.jpg",
+    "Screenshot_2026-10-15-21-26-28-18_59d210597bb45e384c78e7c69a960e51.jpg"
+  ],
+  "changes": [
+    "T9 composing stays inside IME; raw terminal does not receive preedit",
+    "Filter numeric T9 preedit fallback",
+    "Terminal deletion sends DEL instead of surrounding-text operations",
+    "Home picker remains available when selected; existing feature hub provides switch input method"
+  ],
+  "tests": {
+    "command": "python -m unittest tests.test_v08_keyboard tests.test_v08_input_session",
+    "tests": 4,
+    "exit_code": 0,
+    "scope": "host logic tests; Java behavior checks run within Python suite"
+  },
+  "build": {
+    "command": "gradle -p android --offline --no-daemon :app:assembleDebug",
+    "exit_code": 0
+  },
+  "apk": {
+    "bytes": 256457125,
+    "sha256": "d87851de19bed9832b1d99ba06433e9da26769fc45c43458105f731a254b1193"
+  },
+  "device_validation": "PENDING: installation and reproduction in Termux/normal editor; no claimed remote or live verification"
+}

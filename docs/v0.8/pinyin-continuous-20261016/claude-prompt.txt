@@ -1,0 +1,551 @@
+只读专家咨询，禁止操作。用户报告26键拼音连续多打字母后无候选/停住。请专注状态机、候选刷新和宿主回调，明确代码证据与待验证推测，给最小复现与修复建议；输出中文，1000字内。不要推断已真机复现。
+
+FILE android/app/src/main/java/io/github/amxooo/voiceinput2pc/KeyboardController.java
+package io.github.amxooo.voiceinput2pc;
+
+/** Pure keyboard state. The host controls InputConnection and asynchronous speech. */
+public final class KeyboardController {
+    public static final int T9_MAX_CODE_LENGTH = 24;
+    public enum Mode { PINYIN, T9, ENGLISH, NUMBERS, SYMBOLS }
+    private final ChineseInputEngine engine;
+    private Mode mode = Mode.PINYIN;
+    private boolean uppercase;
+    public KeyboardController(ChineseInputEngine engine) { this.engine = engine; }
+    public Mode mode() { return mode; }
+    public boolean uppercase() { return uppercase; }
+    public boolean chinese() { return mode == Mode.PINYIN || mode == Mode.T9; }
+    public void setMode(Mode next) {
+        engine.reset(); mode = next;
+        if (chinese()) engine.setLayout(next == Mode.T9
+                ? ChineseInputEngine.Layout.T9 : ChineseInputEngine.Layout.FULL_PINYIN);
+    }
+    public void toggleCase() { uppercase = !uppercase; }
+    /** Null means composition only. Non-Chinese keys are committed by the host. */
+    public String type(String key) {
+        if (chinese()) {
+            if (key == null || key.length() != 1) return "";
+            char value=key.charAt(0);
+            boolean composingKey=mode == Mode.T9
+                    ? (value >= '2' && value <= '9') || value == '\''
+                    : (value >= 'a' && value <= 'z') || value == '\'';
+            if (!composingKey) return key;
+            if (!engine.snapshot().available) return null;
+            if (mode == Mode.T9 && t9LimitReached()) return null;
+            engine.input(value);
+            return null;
+        }
+        return mode == Mode.ENGLISH && uppercase ? key.toUpperCase(java.util.Locale.ROOT) : key;
+    }
+    public boolean t9LimitReached() {
+        if (mode != Mode.T9) return false;
+        return engine.snapshot().numericInput.length() >= T9_MAX_CODE_LENGTH;
+    }
+    public boolean isT9ComposingKey(String key) {
+        if (mode != Mode.T9 || key == null || key.length() != 1) return false;
+        char value=key.charAt(0);
+        return (value >= '2' && value <= '9') || value == '\'';
+    }
+    public ChineseInputEngine.Snapshot snapshot() { return engine.snapshot(); }
+    /**
+     * Text safe to expose to the editor while composition is in progress.
+     * T9 digits are an internal lookup code and must never appear in the host
+     * document. Its first Chinese candidate is the visible composing text.
+     */
+    public String displayComposition(ChineseInputEngine.Snapshot state) {
+        if (state == null) return "";
+        if (mode == Mode.T9) {
+            if (state.candidates.isEmpty()) return "";
+            String candidate=state.candidates.get(0);
+            // Lookup digits are never document text, including Rime fallback candidates.
+            return candidate.matches("[0-9' ]+") ? "" : candidate;
+        }
+        return state.rawInput;
+    }
+    /** Keyboard-panel explanation only; never pass this string to the editor. */
+    public String displayPreedit(ChineseInputEngine.Snapshot state) {
+        if (state == null) return "";
+        if (mode == Mode.T9 && !state.candidateComments.isEmpty()) {
+            String spelling=state.candidateComments.get(0);
+            if (spelling != null && !spelling.trim().isEmpty()) {
+                int selectedEnd=Math.max(0,Math.min(state.selectionStart,state.preedit.length()));
+                String prefix=state.preedit.substring(0,selectedEnd);
+                return prefix+spelling;
+            }
+        }
+        return state.preedit.isEmpty() ? state.rawInput : state.preedit;
+    }
+    public String select(int index) {
+        if (!chinese()) return null;
+        ChineseInputEngine.Snapshot state = engine.snapshot();
+        if (index < 0 || index >= state.candidates.size()) return null;
+        return engine.select(index);
+    }
+    public void setLearningEnabled(boolean enabled) { engine.setLearningEnabled(enabled); }
+    public boolean activateSyllable(int index) {
+        return mode == Mode.T9 && engine.activateSyllable(index);
+    }
+    public boolean chooseSyllable(String syllable) {
+        return mode == Mode.T9 && engine.chooseSyllable(syllable);
+    }
+    public void reset() { engine.reset(); }
+    public void backspace() { engine.backspace(); }
+    public void nextPage() { engine.nextPage(); }
+    public void previousPage() { engine.previousPage(); }
+    public void close() { engine.close(); }
+}
+
+FILE android/app/src/main/java/io/github/amxooo/voiceinput2pc/RimeChineseInputEngine.java
+package io.github.amxooo.voiceinput2pc;
+
+import android.content.Context;
+import android.content.res.AssetManager;
+import java.io.*;
+import java.util.*;
+
+/** App-owned Rime session: candidate text comes exclusively from librime. */
+public final class RimeChineseInputEngine implements ChineseInputEngine {
+    private long session;
+    private Layout layout = Layout.FULL_PINYIN;
+    private boolean learningEnabled = true;
+    private String failure = "";
+    private static boolean loaded;
+    private T9Disambiguation t9 = new T9Disambiguation(Collections.emptyList());
+    public RimeChineseInputEngine(Context context) {
+        synchronized (RimeChineseInputEngine.class) {
+            try {
+                if (!loaded) { System.loadLibrary("rimebridge"); loaded = true; }
+                File base = new File(context.getFilesDir(), "rime");
+                File shared = new File(base, "shared"), user = new File(base, "user");
+                if (!user.isDirectory() && !user.mkdirs()) throw new IOException("创建词库目录失败");
+                ensureAssets(context.getAssets(), shared);
+                List<String> spellings = new ArrayList<>();
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                        context.getAssets().open("rime/t9-syllables.txt"), "UTF-8"))) {
+                    String line; while ((line=reader.readLine()) != null) spellings.add(line);
+                }
+                t9 = new T9Disambiguation(spellings);
+                session = nativeCreate(shared.getAbsolutePath(), user.getAbsolutePath());
+                if (session == 0) throw new IOException("中文引擎初始化失败：" + nativeError());
+                setLayout(layout);
+            } catch (Exception | LinkageError error) {
+                String reason = error.getMessage();
+                failure = "中文引擎尚不可用：" + (reason == null ? error.getClass().getSimpleName() : reason.substring(0, Math.min(reason.length(), 300)));
+            }
+        }
+    }
+    private static void ensureAssets(AssetManager assets, File shared) throws IOException {
+        String expected;
+        try (InputStream in = assets.open("rime/version.txt")) { expected = readSmall(in); }
+        File version = new File(shared, "version.txt");
+        if (version.isFile()) {
+            try (InputStream in = new FileInputStream(version)) {
+                if (expected.equals(readSmall(in))) return;
+            }
+        }
+        copyAssets(assets, "rime", shared);
+        try (FileOutputStream out = new FileOutputStream(version)) { out.write(expected.getBytes("UTF-8")); out.getFD().sync(); }
+    }
+    private static String readSmall(InputStream in) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream(); byte[] b = new byte[128]; int n;
+        while ((n = in.read(b)) != -1) { if (out.size() + n > 4096) throw new IOException("资源版本异常"); out.write(b, 0, n); }
+        return new String(out.toByteArray(), "UTF-8");
+    }
+    private static void copyAssets(AssetManager assets, String path, File target) throws IOException {
+        String[] names = assets.list(path);
+        if (names == null) throw new IOException("词库资源缺失");
+        if (names.length > 0) {
+            if (!target.isDirectory() && !target.mkdirs()) throw new IOException("创建词库资源目录失败");
+            for (String name : names) copyAssets(assets, path + "/" + name, new File(target, name));
+        } else {
+            if (path.equals("rime/version.txt")) return;
+            File temp = new File(target.getParentFile(), target.getName() + ".pending");
+            try (InputStream in = assets.open(path); FileOutputStream out = new FileOutputStream(temp)) {
+                byte[] buffer = new byte[32768]; int n;
+                while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+                out.getFD().sync();
+            }
+            if (!temp.renameTo(target)) throw new IOException("部署词库资源失败");
+        }
+    }
+    private static int number(String value) {
+        try { return Integer.parseInt(value); } catch (NumberFormatException e) { return 0; }
+    }
+    @Override public synchronized Snapshot snapshot() {
+        if (session == 0) return new Snapshot("", Collections.emptyList(), 0, false, false, failure);
+        String[] data = nativeSnapshot(session);
+        if (data == null || data.length < 7 || (data.length-7)%2 != 0)
+            return new Snapshot("", Collections.emptyList(), 0, false, false, "中文引擎状态读取失败");
+        List<String> words=new ArrayList<>(), comments=new ArrayList<>();
+        for (int i=7;i<data.length;i+=2) { words.add(data[i]); comments.add(data[i+1]); }
+        if (layout == Layout.T9) t9.synchronize(data[0],data[3],number(data[5]));
+        return new Snapshot(data[0], words, number(data[1]), "1".equals(data[2]), true, "",
+                data[3], number(data[4]), number(data[5]), number(data[6]), comments,
+                layout == Layout.T9 ? t9.options() : Collections.emptyList(),
+                layout == Layout.T9 ? t9.selected() : "",
+                layout == Layout.T9 ? t9.segments() : Collections.emptyList(),
+                layout == Layout.T9 ? t9.activeSegment() : -1,
+                layout == Layout.T9 && t9.canUndo(),
+                layout == Layout.T9 ? t9.originalInput() : data[0]);
+    }
+    @Override public synchronized void input(char value) {
+        if (session == 0) return;
+        if (layout == Layout.T9 && !t9.protectedState() && ((value >= '2' && value <= '9') || value == '\'')) {
+            T9Disambiguation previous=t9.copy();t9.append(value);
+            if (!nativeSetInput(session,t9.input())) t9=previous;
+        } else nativeKey(session,value);
+    }
+    @Override public synchronized void backspace() {
+        if (session == 0) return;
+        snapshot();
+        if (layout == Layout.T9 && !t9.protectedState() && !t9.hasChineseSelection()) {
+            T9Disambiguation previous=t9.copy();t9.backspace();
+            if (!nativeSetInput(session,t9.input())) t9=previous;
+        } else nativeKey(session,0xff08); // Rime first reopens its selected Chinese segment.
+        snapshot();
+    }
+    @Override public synchronized boolean activateSyllable(int index) {
+        if (session == 0 || layout != Layout.T9) return false;
+        snapshot();return t9.activate(index);
+    }
+    @Override public synchronized boolean chooseSyllable(String syllable) {
+        if (session == 0 || layout != Layout.T9) return false;
+        snapshot();
+        T9Disambiguation previous=t9.copy();
+        if (!t9.choose(syllable)) return false;
+        if (nativeSetInput(session,t9.input())) return true;
+        t9=previous;return false;
+    }
+    @Override public synchronized String select(int index) {
+        if (session == 0 || index < 0) return null;
+        String result=nativeSelect(session,index);
+        Snapshot state=snapshot();
+        if (state.rawInput.isEmpty()) t9.reset();
+        return result;
+    }
+    @Override public synchronized void nextPage() { if (session != 0) nativeKey(session, 0xff56); }
+    @Override public synchronized void previousPage() { if (session != 0) nativeKey(session, 0xff55); }
+    @Override public synchronized void setLayout(Layout value) {
+        layout = Objects.requireNonNull(value);
+        t9.reset();
+        String schema = value == Layout.T9 ? "t9" : "rime_ice";
+        if (!learningEnabled) schema += "_private";
+        if (session != 0 && !nativeSchema(session, schema)) {
+            failure = "中文输入方案加载失败";
+            nativeDestroy(session); session = 0;
+        }
+    }
+    @Override public synchronized void setLearningEnabled(boolean enabled) {
+        if (learningEnabled != enabled) { learningEnabled = enabled; reset(); setLayout(layout); }
+    }
+    @Override public synchronized void reset() { t9.reset(); if (session != 0) nativeClear(session); }
+    @Override public synchronized void close() { if (session != 0) nativeDestroy(session); session = 0; }
+    private static native String nativeError();
+    private static native long nativeCreate(String shared, String user);
+    private static native String[] nativeSnapshot(long session);
+    private static native boolean nativeKey(long session, int key);
+    private static native boolean nativeSetInput(long session, String input);
+    private static native String nativeSelect(long session, int index);
+    private static native boolean nativeSchema(long session, String schema);
+    private static native void nativeClear(long session);
+    private static native void nativeDestroy(long session);
+}
+
+FILE android/app/src/main/cpp/rime/rimebridge.c
+/* App-owned JNI adapter to the BSD-licensed librime C API. No Trime code copied. */
+#include <jni.h>
+#include <dlfcn.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include "rime_api.h"
+static RimeApi *api;
+static char last_error[512];
+static char *shared_path, *user_path, *prebuilt_path;
+#define FN(name) Java_io_github_amxooo_voiceinput2pc_RimeChineseInputEngine_##name
+/* Standard UTF-8 includes supplementary Han characters; NewStringUTF is modified UTF-8. */
+static jstring java_utf8(JNIEnv *env,const char *text) {
+    if (!text) return NULL;
+    size_t length=strlen(text); if (length>0x7fffffff) return NULL;
+    jbyteArray bytes=(*env)->NewByteArray(env,(jsize)length);
+    if (!bytes) return NULL;
+    (*env)->SetByteArrayRegion(env,bytes,0,(jsize)length,(const jbyte*)text);
+    jclass cls=(*env)->FindClass(env,"java/lang/String");
+    jmethodID init=(*env)->GetMethodID(env,cls,"<init>","([BLjava/lang/String;)V");
+    jstring charset=(*env)->NewStringUTF(env,"UTF-8");
+    jstring value=(jstring)(*env)->NewObject(env,cls,init,bytes,charset);
+    (*env)->DeleteLocalRef(env,bytes);(*env)->DeleteLocalRef(env,cls);(*env)->DeleteLocalRef(env,charset);
+    return value;
+}
+JNIEXPORT jlong JNICALL FN(nativeCreate)(JNIEnv *env,jclass clazz,jstring shared,jstring user) {
+    (void)clazz;
+    if (!api) {
+        void *library=dlopen("librime.so",RTLD_NOW|RTLD_LOCAL);
+        if (!library) { snprintf(last_error,sizeof(last_error),"%s",dlerror()); return 0; }
+        RimeApi *(*get_api)(void)=dlsym(library,"rime_get_api");
+        if (!get_api) { snprintf(last_error,sizeof(last_error),"Missing librime C API"); return 0; }
+        api=get_api();
+        const char *a=(*env)->GetStringUTFChars(env,shared,NULL), *b=(*env)->GetStringUTFChars(env,user,NULL);
+        shared_path=strdup(a); user_path=strdup(b);
+        (*env)->ReleaseStringUTFChars(env,shared,a); (*env)->ReleaseStringUTFChars(env,user,b);
+        RIME_STRUCT(RimeTraits,traits);
+        traits.shared_data_dir=shared_path; traits.user_data_dir=user_path;
+        prebuilt_path=malloc(strlen(shared_path)+7);sprintf(prebuilt_path,"%s/build",shared_path);
+        traits.prebuilt_data_dir=prebuilt_path;
+        traits.staging_dir=prebuilt_path;
+        traits.distribution_name="Universal Input"; traits.distribution_code_name="universal";
+        traits.distribution_version="0.8"; traits.app_name="rime.universal";
+        traits.min_log_level=2; traits.log_dir="";
+        api->setup(&traits); api->initialize(&traits);
+        /* All dictionary/prism/schema deployment is performed at build time.
+           Never run the high-memory dictionary compiler inside an IME process. */
+    }
+    return (jlong)api->create_session();
+}
+/* Rime offsets are UTF-8 bytes; Android spans use UTF-16 code units. */
+static int utf16_offset(const char *s,int bytes) {
+    if (!s || bytes<=0) return 0;
+    int count=0;
+    for (int i=0;s[i] && i<bytes;i++) {
+        unsigned char c=(unsigned char)s[i];
+        if ((c&0xc0)!=0x80) count += c>=0xf0 ? 2 : 1;
+    }
+    return count;
+}
+JNIEXPORT jobjectArray JNICALL FN(nativeSnapshot)(JNIEnv *env,jclass clazz,jlong id) {
+    (void)clazz;
+    if (!api || !api->find_session((RimeSessionId)id)) return NULL;
+    RIME_STRUCT(RimeContext,ctx);
+    if (!api->get_context((RimeSessionId)id,&ctx)) return NULL;
+    int n=ctx.menu.num_candidates;
+    jobjectArray result=(*env)->NewObjectArray(env,n*2+7,(*env)->FindClass(env,"java/lang/String"),NULL);
+    const char *preedit=ctx.composition.preedit?ctx.composition.preedit:"";
+    char page[24],cursor[24],start[24],end[24];
+    snprintf(page,sizeof(page),"%d",ctx.menu.page_no);
+    snprintf(cursor,sizeof(cursor),"%d",utf16_offset(preedit,ctx.composition.cursor_pos));
+    snprintf(start,sizeof(start),"%d",utf16_offset(preedit,ctx.composition.sel_start));
+    snprintf(end,sizeof(end),"%d",utf16_offset(preedit,ctx.composition.sel_end));
+    const char *base[7]={RIME_PROVIDED(api,get_input)?api->get_input((RimeSessionId)id):preedit,
+        page,ctx.menu.is_last_page?"0":"1",preedit,cursor,start,end};
+    for (int i=0;i<n*2+7;i++) {
+        const char *text=i<7?base[i]:(i%2==1?ctx.menu.candidates[(i-7)/2].text:ctx.menu.candidates[(i-7)/2].comment);
+        jstring value=java_utf8(env,text?text:"");
+        (*env)->SetObjectArrayElement(env,result,i,value); (*env)->DeleteLocalRef(env,value);
+    }
+    api->free_context(&ctx); return result;
+}
+JNIEXPORT jboolean JNICALL FN(nativeSetInput)(JNIEnv *env,jclass clazz,jlong id,jstring input) {
+    (void)clazz;
+    if (!api || !RIME_API_AVAILABLE(api,set_input) || !input) return JNI_FALSE;
+    const char *text=(*env)->GetStringUTFChars(env,input,NULL);
+    if (!text) return JNI_FALSE;
+    Bool ok=api->set_input((RimeSessionId)id,text);
+    (*env)->ReleaseStringUTFChars(env,input,text);
+    return ok;
+}
+JNIEXPORT jboolean JNICALL FN(nativeKey)(JNIEnv *env,jclass clazz,jlong id,jint key) {
+    (void)env;(void)clazz; return api && api->process_key((RimeSessionId)id,key,0);
+}
+JNIEXPORT jstring JNICALL FN(nativeSelect)(JNIEnv *env,jclass clazz,jlong id,jint index) {
+    (void)clazz;
+    if (!api || index<0) return NULL;
+    RIME_STRUCT(RimeContext,ctx);
+    if (!api->get_context((RimeSessionId)id,&ctx)) return NULL;
+    int global=ctx.menu.page_no*ctx.menu.page_size+index;
+    int valid=index<ctx.menu.num_candidates;
+    api->free_context(&ctx);
+    if (!valid || !RIME_PROVIDED(api,select_candidate) || !api->select_candidate((RimeSessionId)id,global)) return NULL;
+    RIME_STRUCT(RimeCommit,commit);
+    if (!api->get_commit((RimeSessionId)id,&commit)) return NULL;
+    jstring result=java_utf8(env,commit.text);
+    api->free_commit(&commit); return result;
+}
+JNIEXPORT jboolean JNICALL FN(nativeSchema)(JNIEnv *env,jclass clazz,jlong id,jstring schema) {
+    (void)clazz; if (!api) return JNI_FALSE;
+    const char *name=(*env)->GetStringUTFChars(env,schema,NULL);
+    int ok=api->select_schema((RimeSessionId)id,name);
+    (*env)->ReleaseStringUTFChars(env,schema,name);
+    if (ok) api->set_option((RimeSessionId)id,"ascii_mode",False);
+    return ok;
+}
+JNIEXPORT void JNICALL FN(nativeClear)(JNIEnv *env,jclass clazz,jlong id) {(void)env;(void)clazz;if(api)api->clear_composition((RimeSessionId)id);}
+JNIEXPORT void JNICALL FN(nativeDestroy)(JNIEnv *env,jclass clazz,jlong id) {(void)env;(void)clazz;if(api)api->destroy_session((RimeSessionId)id);}
+
+JNIEXPORT jstring JNICALL FN(nativeError)(JNIEnv *env,jclass clazz) { (void)clazz; return java_utf8(env,last_error); }
+
+FILE scripts/rime/schemas/rime_ice.schema.yaml
+# App-owned bounded Rime adapter schema. Dictionary: iDvel/rime-ice (GPL-3.0).
+schema:
+  schema_id: rime_ice
+  name: 雾凇全拼
+  version: '0.8.1'
+switches:
+  - name: ascii_mode
+    reset: 0
+    states: [中文, English]
+engine:
+  processors: [ascii_composer, recognizer, key_binder, speller, punctuator, selector, navigator, express_editor]
+  segmentors: [ascii_segmentor, matcher, abc_segmentor, punct_segmentor, fallback_segmentor]
+  translators: [punct_translator, script_translator]
+  filters: [uniquifier]
+speller:
+  alphabet: abcdefghijklmnopqrstuvwxyz
+  delimiter: " '"
+  algebra:
+    - abbrev/^([a-z]).+$/$1/
+    - abbrev/^([zcs]h).+$/$1/
+translator:
+  dictionary: rime_ice
+  enable_user_dict: true
+  enable_sentence: true
+  spelling_hints: 8
+  preedit_format:
+    - xform/([nl])v/$1ü/
+    - xform/([jqxy])v/$1u/
+key_binder:
+  bindings:
+    - {when: has_menu, accept: Page_Up, send: Page_Up}
+    - {when: has_menu, accept: Page_Down, send: Page_Down}
+
+android/app/src/main/java/io/github/amxooo/voiceinput2pc/UniversalInputMethodService.java:410
+        if (!panels.isPrimary() || busy() || sensitiveField) return;
+        switchMode(keyboard.mode() == KeyboardController.Mode.ENGLISH
+                ? KeyboardController.Mode.PINYIN : KeyboardController.Mode.ENGLISH);
+    }
+    private void type(String value) {
+        if (!panels.isPrimary()) return;
+        if (busy()) return;
+        if (" ".equals(value)) { space(); return; }
+        if ("SHIFT".equals(value)) { keyboard.toggleCase(); rebuildKeys(); return; }
+        if (keyboard.isT9ComposingKey(value) && keyboard.t9LimitReached()) {
+            message="九宫格连续输入已达24位，请先选词或删除"; render(); return;
+        }
+        String literal = keyboard.type(value);
+        if (literal != null) commitLiteral(literal); else syncComposition();
+    }
+    private boolean rawEditor() {
+        EditorInfo info=getCurrentInputEditorInfo();
+        return info != null && EditorCompatibility.rawEditor(info.inputType,info.packageName);
+    }
+    private boolean inlineCompositionAllowed() {
+        EditorInfo info=getCurrentInputEditorInfo();
+        return info != null && EditorCompatibility.inlineComposition(info.inputType,info.packageName,
+                keyboard.mode() == KeyboardController.Mode.T9);
+    }
+    private void syncComposition() {
+        ChineseInputEngine.Snapshot state=keyboard.snapshot();
+        String visible=keyboard.displayComposition(state);
+        if (session.state() == InputSession.State.PREVIEW) { render(); return; }
+        session.compose(session.generation(),visible);
+        targets.setComposing(visible);
+        if (!targets.isRemote() && inlineCompositionAllowed()) {
+            InputConnection connection=getCurrentInputConnection();
+            if (connection != null) {
+                if (!visible.isEmpty()) connection.setComposingText(visible,1);
+                else if (!activeComposing.isEmpty()) { connection.setComposingText("",1); connection.finishComposingText(); }
+            }
+            activeComposing=visible;
+        } else activeComposing="";
+        render();
+    }
+    private void selectSyllable(String value) {
+android/app/src/main/java/io/github/amxooo/voiceinput2pc/UniversalInputMethodService.java:484
+    private void selectCandidate(int index) {
+        if (!panels.isPrimary() || busy()) return;
+        String result=keyboard.select(index);
+        if (result != null && !result.isEmpty()) {
+            if (session.state() == InputSession.State.PREVIEW) editPreview(result,false);
+            else routeStable(result);
+        }
+        syncComposition();
+    }
+    /** Switching input mode keeps what the user typed, even if no Chinese candidate is available. */
+    private void settleKeyboardComposition() {
+        ChineseInputEngine.Snapshot state=keyboard.snapshot();
+        if(state.rawInput.isEmpty())return;
+        String text=state.candidates.isEmpty() ? state.rawInput : keyboard.select(0);
+        if(text==null || text.isEmpty())text=state.rawInput;
+        routeStable(text,"ime_pinyin");
+        keyboard.reset();targets.clearComposing();
+        InputConnection c=getCurrentInputConnection();if(!targets.isRemote() && c!=null)c.finishComposingText();
+        activeComposing="";
+    }
+    private void clearComposition() {
+        if (keyboard != null) keyboard.reset();
+        targets.clearComposing();
+        InputConnection connection=getCurrentInputConnection();
+        if (connection != null && !activeComposing.isEmpty()) {
+            connection.setComposingText("",1); connection.finishComposingText();
+        }
+        activeComposing="";
+    }
+    private void commitLiteral(String value) {
+        if (!panels.isPrimary() || busy()) return;
+        ChineseInputEngine.Snapshot state=keyboard.snapshot();
+        if (keyboard.chinese() && !state.rawInput.isEmpty()) { message="请先选词或删除拼音"; render(); return; }
+        if (session.state() == InputSession.State.PREVIEW) { editPreview(value,false); render(); return; }
+        routeStable(value);
+    }
+    private void space() {
+        if (!panels.isPrimary()) return;
+        if (session.state() == InputSession.State.PREVIEW) {
+            if (!keyboard.snapshot().candidates.isEmpty()) selectCandidate(0);
+            else if (keyboard.snapshot().rawInput.isEmpty()) editPreview(" ",false);
+            return;
+        }
+        if (busy()) return;
+        ChineseInputEngine.Snapshot state=keyboard.snapshot();
+        if (keyboard.chinese() && !state.candidates.isEmpty()) selectCandidate(0);
+        else if (state.rawInput.isEmpty()) commitLiteral(" ");
+    }
+    private void backspace() {
+        if (!panels.isPrimary() || busy()) return;
+        if (session.state() == InputSession.State.PREVIEW) {
+            if (!keyboard.snapshot().rawInput.isEmpty()) { keyboard.backspace(); render(); }
+            else editPreview("",true);
+            return;
+        }
+        if (!keyboard.snapshot().rawInput.isEmpty()) { keyboard.backspace(); syncComposition(); return; }
+        if (targets.isRemote()) {
+android/app/src/main/java/io/github/amxooo/voiceinput2pc/UniversalInputMethodService.java:1125
+                                             int candidatesStart,int candidatesEnd) {
+        super.onUpdateSelection(oldSelStart,oldSelEnd,newSelStart,newSelEnd,candidatesStart,candidatesEnd);
+        lastSelectionStart=newSelStart; lastSelectionEnd=newSelEnd;
+        if(busy() && !targets.isRemote()) {
+            if(VoiceDockPolicy.cursorDiverged(voiceWriting,oldSelStart,oldSelEnd,newSelStart,newSelEnd,candidatesEnd,voiceExpected)) {
+                speech.cancel();
+                InputConnection c=getCurrentInputConnection();if(c!=null)c.finishComposingText();
+                activeComposing="";inlineVoiceText="";
+                InputSession.Identity current=session.identity();session.begin(current.targetId,current.packageName,current.fieldId,current.inputType);
+                message="光标已移动 · 点击语音继续";render();
+            }
+            return;
+        }
+        if (!targets.isRemote() && !activeComposing.isEmpty()
+                && (newSelStart != candidatesEnd || newSelEnd != candidatesEnd)) {
+            clearComposition(); message="光标已移动，原拼音组字已取消"; render();
+        }
+    }
+
+    @Override public boolean onEvaluateFullscreenMode() { return false; }
+
+android/app/src/main/java/io/github/amxooo/voiceinput2pc/UniversalInputMethodService.java:1234
+        composition.setVisibility(!voiceSurface && !state.rawInput.isEmpty() ? View.VISIBLE : View.GONE);
+        candidateScroller.setVisibility(!voiceSurface && !state.rawInput.isEmpty() ? View.VISIBLE : View.GONE);
+        if (!busy() && !voiceSurface) composition.setText(keyboard.displayPreedit(state));
+        renderSyllables(state,!voiceSurface && keyboard.mode() == KeyboardController.Mode.T9);
+        candidates.removeAllViews();
+        if (!busy() && keyboard.chinese()) {
+            TextView previous=key("‹",18); previous.setEnabled(state.page > 0);
+            previous.setOnClickListener(v -> { keyboard.previousPage(); render(); });
+            candidates.addView(previous,new LinearLayout.LayoutParams(dp(36),-1));
+            for (int i=0;i<state.candidates.size();i++) {
+                final int index=i; TextView candidate=key(state.candidates.get(i),18);
+                candidate.setPadding(dp(12),0,dp(12),0); candidate.setOnClickListener(v -> selectCandidate(index));
+                candidates.addView(candidate,new LinearLayout.LayoutParams(-2,-1));
+            }
+            TextView next=key("›",18); next.setEnabled(state.hasNext);
+            next.setOnClickListener(v -> { keyboard.nextPage(); render(); });
+            candidates.addView(next,new LinearLayout.LayoutParams(dp(36),-1));
+        }
+        if (sensitiveField) status.setText("敏感输入框 · 语音、历史和跨设备链路已关闭");

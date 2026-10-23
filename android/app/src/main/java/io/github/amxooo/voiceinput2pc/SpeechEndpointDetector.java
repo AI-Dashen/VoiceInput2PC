@@ -13,8 +13,8 @@ final class SpeechEndpointDetector {
     enum Decision { CONTINUE, END_OF_SPEECH, NO_SPEECH_TIMEOUT, MAX_DURATION }
     private static final long START_CONFIRM_MS = 160;
     private static final long END_SILENCE_MS = 6000;
-    private static final long NO_SPEECH_MS = 8000;
-    private static final long MAX_SESSION_MS = 600000;
+    static final long NO_SPEECH_MS = 5000;
+    static final long MAX_SESSION_MS = 120000;
     private final int sampleRate;
     private double noiseFloor = 90;
     private long totalSamples, voiceRunSamples, silenceSamples;

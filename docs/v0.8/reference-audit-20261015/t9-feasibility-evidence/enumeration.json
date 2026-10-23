@@ -1,0 +1,31 @@
+{
+  "source": "cn_dicts/8105.dict.yaml",
+  "syllables": 419,
+  "input": "64426",
+  "prefixOptions": [
+    {
+      "syllable": "m",
+      "digitLength": 1
+    },
+    {
+      "syllable": "mi",
+      "digitLength": 2
+    },
+    {
+      "syllable": "n",
+      "digitLength": 1
+    },
+    {
+      "syllable": "ng",
+      "digitLength": 2
+    },
+    {
+      "syllable": "ni",
+      "digitLength": 2
+    },
+    {
+      "syllable": "o",
+      "digitLength": 1
+    }
+  ]
+}

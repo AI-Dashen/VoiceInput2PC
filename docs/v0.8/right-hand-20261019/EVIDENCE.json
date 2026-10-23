@@ -1,0 +1,35 @@
+{
+  "version": "0.8.23-right-hand-rail",
+  "version_code": 33,
+  "status": "BUILD_VERIFIED_DEVICE_PENDING",
+  "apk_bytes": 240872069,
+  "apk_sha256": "c629744ae405b64c433fccc721e1210add89d2fa2c5d06204b6d9bb9acd5d15a",
+  "build": "assembleDebug + assembleDebugAndroidTest PASS (15s)",
+  "automated_tests": {
+    "mic_shortcut": 2,
+    "keyboard_controller_and_contracts": 1,
+    "voice_dock_policy": 1,
+    "input_session": 3,
+    "layout_java": "PASS"
+  },
+  "android_tests_added": [
+    "testRightRailOrderAndNarrowKeyboardFit",
+    "testTransparentMicHasNoCenterPlateOnEitherHostBackground"
+  ],
+  "android_tests_execution": "PENDING: adb devices lists no device; compiled only",
+  "claude_review": {
+    "status": "success",
+    "duration": 22.572,
+    "not_adopted": [
+      "restore opaque center",
+      "change ASR timeout",
+      "add beam/learning"
+    ]
+  },
+  "production_change_scope": [
+    "right-hand action column",
+    "transparent mic center",
+    "ring colors/outline contrast",
+    "cancel held delete on leaving keyboard"
+  ]
+}

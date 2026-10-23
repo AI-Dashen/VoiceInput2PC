@@ -26,7 +26,17 @@ class RimePackagingTest(unittest.TestCase):
         schema=(ROOT/'android/app/src/main/assets/rime/build/t9.schema.yaml').read_text()
         self.assertIn('prism: t9',schema)
         self.assertNotIn('lua_',schema)
-        self.assertIn('22233344455566677778889999',schema)
+        for letters,digit in zip(('abc','def','ghi','jkl','mno','pqrs','tuv','wxyz'),'23456789'):
+            self.assertIn(f'derive/[{letters}]/{digit}/',schema)
+        self.assertIn('abcdefghijklmnopqrstuvwxyz23456789',schema)
+        self.assertNotIn('xlit/abcdefghijklmnopqrstuvwxyz/',schema)
+        syllables=(ROOT/'android/app/src/main/assets/rime/t9-syllables.txt').read_text().splitlines()
+        self.assertEqual(sorted(set(syllables)),syllables)
+        self.assertIn('ni',syllables)
+        self.assertIn('hao',syllables)
+        for value in syllables:
+            self.assertRegex(value,r'^[a-z]+$')
+        self.assertEqual('0.8.2',json.loads((ROOT/'android/app/src/main/assets/rime/prebuilt-manifest.json').read_text())['t9_spelling_version'])
     def test_privacy_disables_user_dictionary(self):
         for schema in ['rime_ice_private','t9_private']:
             s=(ROOT/'android/app/src/main/assets/rime/build'/f'{schema}.schema.yaml').read_text()

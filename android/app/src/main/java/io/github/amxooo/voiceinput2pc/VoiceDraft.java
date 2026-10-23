@@ -16,6 +16,17 @@ final class VoiceDraft {
         return base + (needsSpace ? " " : "") + next;
     }
 
+    /** Preserve the author's exact prefix/suffix while inserting one recognized segment. */
+    static String insert(String prefix,String segment,String suffix) {
+        String before=prefix == null ? "" : prefix;
+        String after=suffix == null ? "" : suffix;
+        if (segment == null || segment.trim().isEmpty()) return before+after;
+        String left=append(before,segment);
+        boolean space=!left.isEmpty() && !after.isEmpty()
+                && isAsciiWord(left.codePointBefore(left.length())) && isAsciiWord(after.codePointAt(0));
+        return left+(space ? " " : "")+after;
+    }
+
     private static boolean isAsciiWord(int value) {
         return value < 128 && Character.isLetterOrDigit(value);
     }

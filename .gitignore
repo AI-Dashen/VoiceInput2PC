@@ -60,3 +60,9 @@ android/native-deps/
 *.flute
 *.pcm
 *.wav
+
+# Downloaded speaker models are local package inputs, not Git source.
+android/app/src/main/assets/speaker-diarization/*.onnx
+# Local runtime state and non-redistributable model package inputs.
+/run/
+android/app/src/main/assets/independent-asr/

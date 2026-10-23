@@ -1,0 +1,15 @@
+
+analysis/doubao-ime-20261013/apk/lib/libkeyboard.so:	file format elf64-littleaarch64
+
+Disassembly of section .text:
+
+0000000000232a90 <controller::BoardController::SelectUserSyllableFilter(std::__ndk1::basic_string<char, std::__ndk1::char_traits<char>, std::__ndk1::allocator<char>> const&)>:
+  232a90: f81e0ff3     	str	x19, [sp, #-0x20]!
+  232a94: a9017bfd     	stp	x29, x30, [sp, #0x10]
+  232a98: 910043fd     	add	x29, sp, #0x10
+  232a9c: aa0103f3     	mov	x19, x1
+  232aa0: 97fb7f80     	bl	0x1128a0 <_ZN8keyboard10InputModel11GetInstanceEv@plt>
+  232aa4: a9417bfd     	ldp	x29, x30, [sp, #0x10]
+  232aa8: aa1303e1     	mov	x1, x19
+  232aac: f84207f3     	ldr	x19, [sp], #0x20
+  232ab0: 17fb9a3c     	b	0x1193a0 <_ZN8keyboard10InputModel24SelectUserSyllableFilterERKNSt6__ndk112basic_stringIcNS1_11char_traitsIcEENS1_9allocatorIcEEEE@plt>

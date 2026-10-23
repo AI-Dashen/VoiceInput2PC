@@ -1,0 +1,46 @@
+{
+  "runtime": "sherpa-onnx",
+  "version": "1.13.8",
+  "runtime_source": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-v1.13.8-android-aarch64-termux-shared.tar.bz2",
+  "runtime_archive_sha256": "ad7bac42adc6295293fe6d36475936afb227cdc757cf293c02a706f6aca4e0a2",
+  "models": [
+    {
+      "filename": "model.int8.onnx",
+      "bytes": 1540506,
+      "sha256": "d582f4b4c6b48205de7e0643c57df0df5615a3c176189be3fc461e9d18827b5d",
+      "source": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2",
+      "license": "MIT (CNRS, included in official conversion archive)"
+    },
+    {
+      "filename": "embedding.onnx",
+      "bytes": 28281164,
+      "sha256": "aa3cfc16963a10586a9393f5035d6d6b57e98d358b347f80c2a30bf4f00ceba2",
+      "source": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced.onnx",
+      "license": "Apache-2.0 (upstream ModelScope model card)"
+    }
+  ],
+  "limitations": [
+    "Speaker IDs are per recording, not personal identities.",
+    "Confidence is a clustering score, not calibrated probability.",
+    "Overlapping/low-confidence regions are marked uncertain.",
+    "Native call is synchronous; cancellation is honored after return.",
+    "60-minute maximum per call; use caller persistence for longer recordings."
+  ],
+  "native_libraries": [
+    {
+      "filename": "libspeakerdiarization.so",
+      "bytes": 62968,
+      "sha256": "7ae2917b442c119cae491c528736dcc629a27c94078c6a4d6fa3ef0a2f06b262"
+    },
+    {
+      "filename": "libsherpa-onnx-c-api.so",
+      "bytes": 5164432,
+      "sha256": "5b47d50661f2a5c5399ff2a47e6ff07031c8b31dab0480313c237b063a573dd8"
+    },
+    {
+      "filename": "libonnxruntime.so",
+      "bytes": 22249560,
+      "sha256": "33847ad43bffe204699fd4a27f7f3603452a8cdaf2f9a44983a0bc31ffcf2da1"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "at": "2026-10-16T02:14:27.334525+00:00",
+  "version": "0.8.10-voice-editing",
+  "installed": true,
+  "fixture_tests": {
+    "passed": 36,
+    "failed": 0,
+    "elapsed_s": 5.353
+  },
+  "readiness_jvm_tests": {
+    "passed": 26
+  },
+  "bound_tests": {
+    "cursor_focus": "PASS",
+    "voice_controls": "PASS",
+    "voice_controls_elapsed_s": 6.985
+  },
+  "wechat_cursor": "PENDING",
+  "full_screen_drag": "PENDING",
+  "old_asr_library_unchanged": true,
+  "no_system_settings_changed": true,
+  "evidence": [
+    "device-final.log",
+    "bound-final.log",
+    "bound-complete.log",
+    "window-evidence.json",
+    "focus-evidence.json"
+  ]
+}

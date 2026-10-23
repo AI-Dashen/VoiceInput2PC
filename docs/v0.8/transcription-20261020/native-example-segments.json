@@ -1,0 +1,82 @@
+[
+  {
+    "index": 0,
+    "speaker": 0,
+    "start_ms": 638,
+    "end_ms": 6848,
+    "elapsed_seconds": 4.52407,
+    "text": "这是一个测试说话人日志的音频，下面我们来播放一些测试音频。"
+  },
+  {
+    "index": 1,
+    "speaker": 1,
+    "start_ms": 7017,
+    "end_ms": 10679,
+    "elapsed_seconds": 2.71195,
+    "text": "非常累的时候，就会站在阳台上吹吹风。"
+  },
+  {
+    "index": 2,
+    "speaker": 1,
+    "start_ms": 11472,
+    "end_ms": 13548,
+    "elapsed_seconds": 1.2693,
+    "text": "看远处的灯火，明明暗暗。"
+  },
+  {
+    "index": 3,
+    "speaker": 2,
+    "start_ms": 12957,
+    "end_ms": 16990,
+    "elapsed_seconds": 2.22116,
+    "text": "和你们一起走过很多很多的路，坚持到底。"
+  },
+  {
+    "index": 4,
+    "speaker": 0,
+    "start_ms": 22154,
+    "end_ms": 24837,
+    "elapsed_seconds": 1.66538,
+    "text": "我们下面播放一条雷军的测试音频。"
+  },
+  {
+    "index": 5,
+    "speaker": 5,
+    "start_ms": 27655,
+    "end_ms": 29461,
+    "elapsed_seconds": 1.12742,
+    "text": "这是我第四次。"
+  },
+  {
+    "index": 6,
+    "speaker": 5,
+    "start_ms": 30018,
+    "end_ms": 31503,
+    "elapsed_seconds": 0.931468,
+    "text": "班年度演讲。"
+  },
+  {
+    "index": 7,
+    "speaker": 5,
+    "start_ms": 33680,
+    "end_ms": 37915,
+    "elapsed_seconds": 2.4087,
+    "text": "今天呢，我就先和大家聊聊五大往事。"
+  },
+  {
+    "index": 8,
+    "speaker": 2,
+    "start_ms": 48040,
+    "end_ms": 50487,
+    "elapsed_seconds": 1.43915,
+    "text": "我没有停下对非凡的追求。"
+  },
+  {
+    "index": 9,
+    "speaker": 0,
+    "start_ms": 52563,
+    "end_ms": 54605,
+    "elapsed_seconds": 1.29282,
+    "text": "这个就是所有的测试音频。"
+  }
+]

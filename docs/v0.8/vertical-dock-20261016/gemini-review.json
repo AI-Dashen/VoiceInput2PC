@@ -1,0 +1,9 @@
+{
+  "text": "Gemini 说\n\n作为Android输入法工程与视觉顾问，针对已有IME内小麦克风入口改版需求（无Root、无系统Overlay、底部128dp窗口限制），现从工程约束、尺寸规范、交互冲突消解及视觉效果给出评审与落地方案：\n\n一、 拖动范围与触摸区域的真实限制（IME窗口内）\n\n边界限制：\n\n可拖动范围严格受限于当前128dp高的IME根布局边界（减去系统/输入法内边距，安全范围约为：纵向 \n16\ndp\n∼\n112\ndp\n16dp∼112dp，横向 \n12\ndp\n∼\n(\nScreenWidth\n−\n12\ndp\n)\n12dp∼(ScreenWidth−12dp)）。\n\n无法突破IME窗口底部或顶部扩展到应用区域（无系统Overlay权限）。\n\n触摸区域（Touch Target）：\n\n视觉图标虽小，但必须通过 TouchDelegate 或透明Padding扩展触摸矩阵，确保满足 \n48\ndp\n×\n48\ndp\n48dp×48dp 的无障碍最小点击/拖动热区，防止误触与定位困难。\n\n二、 三圆按钮推荐尺寸与布局方案（上删、中麦、下发）\n\n当用户触发长按或交互展开时，在麦克风周围就地弹出垂直三圆按钮组（不脱离128dp窗口）：\n\n中心麦克风（主入口）：直径 \n36\ndp\n36dp（视觉），热区 \n48\ndp\n48dp；收音中禁用拖动与点击。\n\n上方删除按钮（撤销/退格）：直径 \n32\ndp\n32dp（视觉），热区 \n48\ndp\n×\n36\ndp\n48dp×36dp，距中心麦克风垂直间距 \n8\ndp\n8dp。\n\n下方确认按钮（发送/搜索/回车）：直径 \n32\ndp\n32dp（视觉），热区 \n48\ndp\n×\n36\ndp\n48dp×36dp，距中心麦克风垂直间距 \n8\ndp\n8dp。其 ImeAction 行为严格跟随宿主 EditorInfo（如 IME_ACTION_SEND 或 IME_ACTION_SEARCH）。\n\n三、 交互冲突消解与防自动发送策略\n\n手势多路复用（Gesture Disambiguation）：\n\n单击（Tap）：触发语音识别开始/停止（收音中）。\n\n长按（Long Press, 阈值 \n350\nms\n350ms）：展开“上删、中麦、下发”三圆菜单。长按期间拦截 MOVE 事件，禁止触发拖动。\n\n自由拖动（Pan/Drag）：仅在非长按、非收音状态下，通过 ACTION_MOVE 实时更新 LayoutParams 的 x/y 偏移量。\n\n防自动发送与误触机制：\n\n拖动释放时，若终点落入特定垃圾桶区域或边缘，则取消输入；绝不在拖动释放时自动触发确认发送。\n\n确认按钮需采用“按下高亮、抬起触发”或“明确点击”逻辑，严禁长按连击或滑动到其上方直接触发。\n\n四、 交互预览 SVG 代码（白底青灰色竖排）",
+  "busy": false,
+  "models": [
+    "Gemini\nFlash-Lite"
+  ],
+  "channel": "Gemini website",
+  "complete": true
+}

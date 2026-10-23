@@ -83,7 +83,25 @@ public final class InputSessionTest {
         equal("保留文字", session.preview(), "prior draft survives failure");
     }
 
+    private static void modeSwitchInvalidatesLateCallbacks() {
+        InputSession session=new InputSession();
+        long old=session.begin("field","app",1,1).generation;
+        session.startListening(old);session.startRecognizing(old);
+        InputSession.Identity current=session.interruptToDraft(old,"保留草稿");
+        check(current.generation != old,"mode switch advances producer generation");
+        equal(InputSession.State.PREVIEW,session.state(),"switch retains preview");
+        equal("保留草稿",session.preview(),"no implicit commit");
+        equal(false,session.restorePreview(old,"迟到错误"),"late error cannot cancel draft");
+        equal(false,session.showPreview(old,"迟到识别"),"late final cannot replace draft");
+        session.updatePreview(current.generation,"修改后");
+        equal("修改后",session.preview(),"editing stays in draft");
+        check(session.retainRejectedCommit(current.generation,"写入失败保留"),"rejected write retained");
+        equal(InputSession.State.PREVIEW,session.state(),"rejected write not committed");
+        equal("写入失败保留",session.commit(current.generation),"explicit successful retry");
+    }
+
     public static void main(String[] args) {
+        modeSwitchInvalidatesLateCallbacks();
         staleCallbacksCannotCrossFields();
         previewNeedsExplicitCommit();
         cancelAndInvalidateAreTerminalForOldWork();

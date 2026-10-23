@@ -1,0 +1,44 @@
+{
+  "version": "0.8.25-recorder",
+  "status": "LOCAL_TESTED_DEVICE_PENDING",
+  "scope": [
+    "start",
+    "pause",
+    "resume",
+    "finish",
+    "private_audio_list",
+    "playback",
+    "SAF_export",
+    "notification_controls",
+    "IME_microphone_exclusion"
+  ],
+  "local_tests": {
+    "recording_module": 2,
+    "keyboard": 4,
+    "input_session": 3,
+    "icon_policy": 2
+  },
+  "android_instrumentation": "BUILD_ONLY_NOT_EXECUTED",
+  "real_audio_recording": "USER_REPORTED_PASS: user tested and confirmed audio was recorded; no independent playback/lock-screen evidence captured",
+  "screen_off": "PENDING",
+  "button_remapping": "NOT_IN_SCOPE",
+  "transcription": "NOT_IN_SCOPE",
+  "AI_record_reading": "NOT_IN_SCOPE",
+  "model_changed": false,
+  "system_changed": false,
+  "experts": {
+    "codex": "implementation and verification",
+    "jev": "routing returned",
+    "claude": "review returned success",
+    "google": "browser STOPPED; fallback Antigravity gemini-3.8-flash-low returned technical review; not browser Gemini",
+    "independent_code_review": "completed; corrected export rotation refresh, muted start/resume checks, stale service start teardown, storage-unavailable constructor crash, active mute error display"
+  },
+  "official_sources": [
+    "https://developer.android.com/media/platform/mediarecorder",
+    "https://developer.android.com/develop/background-work/services/fgs/service-types#microphone"
+  ],
+  "rejected_expert_claims": [
+    "POST_NOTIFICATIONS grant is not a mandatory prerequisite to starting FGS; user choice respected; Activity stop controls retained",
+    "No guarantee all interrupted MP4 can be repaired; original bytes preserved and flagged"
+  ]
+}

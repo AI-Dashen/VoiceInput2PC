@@ -1,0 +1,26 @@
+[
+  {
+    "test": "odd",
+    "exit_code": 1,
+    "error": "PCM_16K_MONO_LENGTH_INVALID_MAX_60_MIN",
+    "pass_": true
+  },
+  {
+    "test": "empty",
+    "exit_code": 1,
+    "error": "PCM_16K_MONO_LENGTH_INVALID_MAX_60_MIN",
+    "pass_": true
+  },
+  {
+    "test": "invalid_speakers",
+    "exit_code": 1,
+    "error": "DIARIZATION_PARAMETERS_INVALID",
+    "pass_": true
+  },
+  {
+    "test": "invalid_threshold",
+    "exit_code": 1,
+    "error": "DIARIZATION_PARAMETERS_INVALID",
+    "pass_": true
+  }
+]

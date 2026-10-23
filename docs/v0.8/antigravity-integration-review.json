@@ -1,0 +1,18 @@
+{
+  "provider": "antigravity",
+  "status": "success",
+  "duration": 21.003,
+  "exit_code": 0,
+  "stdout": "### Antigravity 审查意见：独立进程、JNI/Bionic与系统级约束\n\n> **前提界定**：Termux 环境通过 glibc/proot 或命令行独立执行验证仅证明二进制与逻辑兼容，**绝不等同于 Android APK 运行时成功**。APK 运行受 ART、Bionic 动态链接器、SELinux 及严格进程生命周期约束。\n\n#### 1. 独立进程 `:local_asr` 隔离与生命周期约束\n- **Service 保活与降级风险**：输入法主进程与 `:local_asr` 绑定必须使用 `BIND_AUTO_CREATE | BIND_IMPORTANT`。后台空闲或系统低内存杀进程（LMK）会静默杀死该进程，必须在主进程实现 Binder 的 `DeathRecipient` 自动重连与状态降级（回退为纯文字），严禁 crash 扩散至主键盘。\n- **Seccomp/Socket 限制落地**：在 Service 进程初始化时通过 JNI `prctl(PR_SET_SECCOMP, ...)` 或 seccomp-bpf 封死 `AF_INET/AF_INET6`，但须避开本地通信所需 IPC 描述符，防止误阻断 ART 内部信号或 Binder 本地 socket/pipe。\n\n#### 2. AudioRecord 与 JNI/Bionic 冲突\n- **Native 音频争用**：原闭源 so 若内置或隐式调用 OpenSL ES/AAudio，与 Java 层 `AudioRecord` 会产生硬件互斥（尤其录音焦点被抢占时抛出 `E_BUSY`）。建议**统一由 Java 层 AudioRecord 独占采集**，切片后单向 push 至 JNI 内存缓冲区，避免两端重复 open 音频设备。\n- **Bionic Linker 命名空间**：Android 7+ 的 classloader-namespace 会拦截私有依赖加载。必须在 Application 初始化或 Service 启动时通过 `System.loadLibrary` 按正确拓扑依赖顺序显式载入 6 个 so，并关闭 `android:extractNativeLibs=\"false\"` 带来的直接 mmap 对齐隐患。\n\n#### 3. 16KB Page Size 兼容性（关键红线）\n- Android 15 (Target API 35+) 强制或预备 16KB 内存分页对齐。闭源历史 so 极大概率为 4KB 对齐，在 16KB 模拟器/设备上执行 `dlopen` 将直接 `SIGSEGV`/拒绝加载。**必须在实机前用 `readelf -l *.so | grep LOAD` 校验 `Align` 是否达到 `0x4000`**；若为 4KB 且无源码，APK 需限制 Target SDK/关闭 page-size 试验性特性。\n\n#### 4. Binder 传输批次与内存配额 (RSS 604MiB)\n- **跨进程分包**：Binder 事务缓冲区全进程共享仅 1MB。ASR 中间识别文本与分块结果需限制每批次频率（建议防抖 80~120ms 一次）且传输只传 String/Delta 文本增量；音频 PCM 严禁通过 Binder 直接传，应在 `:local_asr` 内直接消费或通过 `SharedMemory`/`MemoryFile` 共享。\n- **604MiB 内存防 OOM**：APK 默认单进程 Heap 仅 192~512MiB，虽 604MiB 多为 Native 匿名内存映射，仍需在 Manifest 中对 `:local_asr` 开启 `android:largeHeap=\"true\"`，并严格在 `SessionFinished/Unload` 阶段调用 native 显式释放内存，防止长时间驻留导致前台 App 频繁被 LMK 清理。",
+  "stderr": "[agy] 検証済みリリース情報を取得中...",
+  "attempts": 1,
+  "model": "gemini-3.8-flash-low",
+  "model_attempts": [
+    {
+      "model": "gemini-3.8-flash-low",
+      "status": "success",
+      "exit_code": 0,
+      "duration": 21.003
+    }
+  ]
+}

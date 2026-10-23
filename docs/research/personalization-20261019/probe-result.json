@@ -1,0 +1,85 @@
+{
+  "status": "PASS_STRUCTURAL_TOKENIZATION_ONLY",
+  "engine": "MNN 3.6.1 + custom C++ decoder",
+  "decoder_header": {
+    "magic": "IASRDEC1",
+    "version": 1,
+    "width": 768,
+    "layers": 12,
+    "positions": 8192,
+    "projections": 72,
+    "norms": 25
+  },
+  "mnn_training_build_enabled": false,
+  "greedy_selection_present": true,
+  "apk_has_merges": false,
+  "local_source_merges_available": true,
+  "model_total_file_bytes": 159239060,
+  "personal_word_tokenization": [
+    {
+      "phrase": "海口港",
+      "token_ids": [
+        2959,
+        2384,
+        9259
+      ],
+      "token_count": 3,
+      "byte_roundtrip": true
+    },
+    {
+      "phrase": "海南港航",
+      "token_ids": [
+        36960,
+        9259,
+        8883
+      ],
+      "token_count": 3,
+      "byte_roundtrip": true
+    },
+    {
+      "phrase": "万能输入法",
+      "token_ids": [
+        59911,
+        11998,
+        1554
+      ],
+      "token_count": 3,
+      "byte_roundtrip": true
+    },
+    {
+      "phrase": "本地识别",
+      "token_ids": [
+        27317,
+        21746
+      ],
+      "token_count": 2,
+      "byte_roundtrip": true
+    },
+    {
+      "phrase": "张晓明",
+      "token_ids": [
+        3516,
+        14314,
+        2000
+      ],
+      "token_count": 3,
+      "byte_roundtrip": true
+    },
+    {
+      "phrase": "OpenAI",
+      "token_ids": [
+        10057,
+        25852
+      ],
+      "token_count": 2,
+      "byte_roundtrip": true
+    }
+  ],
+  "training_run": false,
+  "asr_improvement_tested": false,
+  "limits": [
+    "Byte-level BPE phrase encoding and roundtrip only; no full vendor regex pretokenizer equivalence claimed.",
+    "Phrase boundaries and alternate tokenization paths remain to be tested against actual generated tokens.",
+    "No audio recorded; no model or product file changed; no accuracy or latency improvement claimed."
+  ]
+}

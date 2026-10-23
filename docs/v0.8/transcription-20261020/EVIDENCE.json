@@ -1,0 +1,60 @@
+{
+  "version": "0.8.26-speaker-transcripts",
+  "status": "PARTIAL_DEVICE_ACCEPTANCE_PENDING",
+  "host_test_functions": 14,
+  "native_speaker_invalid_input_cases": 4,
+  "speaker_native_phone": {
+    "source": "official 56.860688-second 4-speaker Chinese fixture",
+    "threshold": 0.75,
+    "seconds": 5.927,
+    "segments": 10,
+    "speaker_count": 4,
+    "peak_rss_kib": 137308,
+    "scope": "Termux native JNI-core/CAPI, not installed APK"
+  },
+  "segmented_asr_phone": {
+    "exit_code": 0,
+    "seconds": 20.277660564999678,
+    "peak_rss_kib": 1168180,
+    "raw_lines": 10,
+    "segments": 10,
+    "speakers": 4,
+    "nonempty_texts": true,
+    "scope": "Same existing MNN native engine in a Termux CLI, no Binder/JobScheduler/UI verification"
+  },
+  "aac_test_fixture": {
+    "duration_s": 56.861,
+    "codec": "aac",
+    "sample_rate": 16000,
+    "channels": 1,
+    "generated_with": "ffmpeg-skill audio.py; source unchanged",
+    "podcast_profile_check": "FAIL loudness -19.9LUFS and true peak0.1dBTP; codec/duration/channels PASS. This is an unmodified ASR test fixture, not a podcast delivery; no normalization applied."
+  },
+  "standalone_android_codec_probe": {
+    "exit_code": 134,
+    "result": "FAILED_TO_START_STANDALONE_ART; no codec execution success claimed; APK decode remains PENDING"
+  },
+  "android_instrumentation": "BUILD_ONLY_NOT_EXECUTED",
+  "automatic_save_to_job": "IMPLEMENTED_DEVICE_PENDING",
+  "speaker_names_and_correction": "IMPLEMENTED_DEVICE_PENDING",
+  "timestamp_playback": "IMPLEMENTED_DEVICE_PENDING",
+  "existing_asr_model_changed": false,
+  "network_transcription": false,
+  "system_settings_changed": false,
+  "hardware_button_changed": false,
+  "known_limits": [
+    "automatic speaker counts are not universally accurate; tested thresholds .9 merged and .5 over-split fixture",
+    "60-minute input cap; source recording never removed",
+    "native diarization cannot interrupt mid-call; CANCELLING until return",
+    "live speech priority is at segment boundaries; ongoing native batch is not preempted",
+    "JobScheduler quotas/Doze can delay background work; progress is persisted",
+    "after reboot pending jobs are requeued when management page resumes; not an always-on daemon",
+    "overlap/uncertain tags are heuristics from actual segmentation/confidence, not calibrated probability or identity"
+  ],
+  "build": "assembleDebug + assembleDebugAndroidTest PASS",
+  "apk": {
+    "version_code": 36,
+    "version_name": "0.8.26-speaker-transcripts",
+    "shared_file": "/storage/emulated/0/Pictures/CodexCamera/MobileAI-Exports/io.github.amxooo.voiceinput2pc-v36.apk"
+  }
+}

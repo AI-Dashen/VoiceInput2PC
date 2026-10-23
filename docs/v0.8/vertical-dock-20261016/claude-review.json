@@ -1,0 +1,12 @@
+{
+  "provider": "claude",
+  "status": "success",
+  "duration": 37.805,
+  "exit_code": 0,
+  "stdout": "# 悬浮语音 Dock 审查（只看产品状态逻辑）\n\n**1. 手势状态机**\n- 现在麦克风用的是系统的点击和长按，加拖动后会互相冲突。建议改成自定义 onTouch，状态为：IDLE→PRESSED→DRAGGING 或 LONG_FIRED。\n  - 移动距离超过系统 touchSlop 就进入 DRAGGING，同时取消长按计时，抬手时不触发点击。\n  - 长按已触发后，抬手也不触发点击。\n  - 只响应第一根手指。ACTION_CANCEL 时全部复位。\n- 录音中拖动不能停止录音。录音中长按只展开“更多”，不能改变录音状态。\n- 删除键的 bindDelete 自己消费触摸，所以拖动只能从麦克风（或明确的把手）发起。删除键在 CANCEL 和拖动时必须调用 stopDeleteRepeat。\n\n**2. 确认语义与 busy 态**\n- 现有矛盾：enter() 在 LISTENING 时会停止录音，但 canRunEditorAction 在 busy 时直接禁用按钮，这个分支实际走不到。建议 LISTENING 和 RECOGNIZING 时确认键一律禁用，停止录音只由麦克风负责。\n- 按钮文字（editorActionLabel）和实际执行（enter）要用同一个纯函数决策，避免显示和行为不一致。优先级建议：\n  1. PREVIEW → 上屏（保留 previewCommitReadyAt 防误触）\n  2. 有拼音输入 → 选第一个候选\n  3. 电脑模式 → 发送（不能调用本机的 performEditorAction）\n  4. 宿主带 NO_ENTER_ACTION 标志，或动作为 NONE/UNSPECIFIED → 回车\n  5. 其他 → 发送、搜索、前往、完成等\n- 远程预览里的文字“长按麦克风可发送”已经和新设计不符，需要改掉。\n- 终端类编辑器（rawEditor）回车应发 KEYCODE_ENTER，不要用 \"\\n\"。\n- 宿主切换时（onStartInputView）要重新 render 确认键文字。\n\n**3. 窗口边界与旋转**\n- 关键风险：dock 是输入法窗口的子 View，只能在 dockRoot 的高度内移动。这个高度在非 compact 时最小只有 128dp，而底边距是 80dp，竖排三键约 144dp，放不下。\n- 如果要让 dock 浮在宿主应用上方，需要在 onComputeInsets 里用 TOUCHABLE_INSETS_REGION 只声明 dock 的区域可触摸，否则会挡住宿主的触摸。\n- 位置限制规则：\n  - 范围是 [0, 容器宽或高 − dock 尺寸]，还要减去系统栏、刘海和手势导航边缘的 inset。\n  - 位置按横竖屏分别保存为比例值。\n  - 在 onConfigurationChanged 和布局变化时重新限制一次，防止旋转后跑出屏幕。\n- “更多”面板的展开方向要根据 dock 靠左还是靠右翻转。远程预览框目前写死在右下，也要跟随 dock 位置。\n\n**4. 视觉缩小与触摸区**\n- 视觉可以缩到 30–32dp，但触摸区建议不低于 44dp，最好保持 48dp。三键竖排约 132–144dp。\n- 三个键的触摸区不能重叠。\n- 悬浮在任意背景上，需要描边或阴影保证对比度，并要有按压反馈。\n- 保留 contentDescription，并给出 TalkBack 下的拖动替代方案（例如在“更多”里提供“复位位置”）。\n\n**5. 最小必测**\n- 纯函数单测：\n  - 手势：小于 slop 抬手→点击；超过 slop→拖动且无点击；长按→无点击；CANCEL 复位。\n  - 确认矩阵：SEND / SEARCH / GO / NONE / NO_ENTER / 多行 / 电脑模式 / PREVIEW / busy / 有拼音。\n  - 位置限制：旋转、分屏后都在边界内。\n- 真机测试：\n  - 场景：Chrome 搜索框、聊天发送框、多行笔记、Termux、电脑模式发送。\n  - 操作：录音中拖动和长按、旋转、分屏、手势导航边缘、TalkBack。\n  - 确认宿主应用中 dock 以外的区域可以正常点击。",
+  "stderr": "",
+  "attempts": 1,
+  "scope": "Actual external Claude review of current CompactImeUiPolicy and labeled UniversalInputMethodService excerpts; no device test",
+  "requested_model": "claude-opus-5-5",
+  "returned_model_id": "not exposed by adapter"
+}

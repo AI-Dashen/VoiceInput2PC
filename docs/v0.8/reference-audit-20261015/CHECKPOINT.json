@@ -1,0 +1,1 @@
+{"version":"0.8.2-input-flows","stage":"CONSOLIDATED_DELIVERY","host_tests":26,"android_tests":24,"build":"PASS","installed":"PASS","next":"Observe actual user microphone and external-app usage; no partial-stage reinstall request","no_commit_push":true}

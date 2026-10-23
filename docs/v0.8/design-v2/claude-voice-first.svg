@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1552" height="688" viewBox="0 0 1552 688" font-family="'Noto Sans CJK SC','Source Han Sans SC','PingFang SC','Microsoft YaHei','Roboto',sans-serif">
+  <rect x="0" y="0" width="1552" height="688" fill="#F3F5F7"/>
+  <rect x="0" y="0" width="1552" height="1" fill="#DCE0E5"/>
+
+  <g>
+    <circle cx="40" cy="38" r="6" fill="#139089"/>
+    <circle cx="40" cy="38" r="11" fill="none" stroke="#139089" stroke-opacity="0.25" stroke-width="2"/>
+    <text x="62" y="46" font-size="22" font-weight="500" fill="#2B3036">本地识别中</text>
+    <g fill="#139089">
+      <rect x="188" y="32" width="4" height="12" rx="2"/>
+      <rect x="198" y="26" width="4" height="24" rx="2"/>
+      <rect x="208" y="20" width="4" height="36" rx="2"/>
+      <rect x="218" y="28" width="4" height="20" rx="2"/>
+      <rect x="228" y="23" width="4" height="30" rx="2"/>
+      <rect x="238" y="30" width="4" height="16" rx="2"/>
+      <rect x="248" y="25" width="4" height="26" rx="2"/>
+      <rect x="258" y="32" width="4" height="12" rx="2"/>
+      <rect x="268" y="34" width="4" height="8" rx="2"/>
+    </g>
+    <text x="290" y="45" font-size="17" fill="#7A828B">离线 · 不上传音频</text>
+    <rect x="1392" y="18" width="136" height="40" rx="20" fill="#FFFFFF" stroke="#D5DAE0" stroke-width="1.5"/>
+    <rect x="1412" y="29" width="12" height="18" rx="2.5" fill="none" stroke="#2B3036" stroke-width="2"/>
+    <rect x="1416" y="42" width="4" height="2" fill="#2B3036"/>
+    <text x="1434" y="45" font-size="19" fill="#2B3036">本机 ▾</text>
+    <path d="M1330 30 L1344 44 L1358 30" fill="none" stroke="#7A828B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <rect x="24" y="76" width="1504" height="132" rx="18" fill="#FFFFFF" stroke="#E2E6EA" stroke-width="1"/>
+  <text x="56" y="110" font-size="16" fill="#8A929B">实时草稿</text>
+  <text x="1496" y="110" font-size="16" fill="#8A929B" text-anchor="end">17 字 · 可直接改字</text>
+  <text x="56" y="168" font-size="34" fill="#2B3036"><tspan>明天下午三点，我们在会议室</tspan><tspan fill="#9AA1A9">碰一下。</tspan></text>
+  <line x1="498" y1="180" x2="600" y2="180" stroke="#9AA1A9" stroke-width="2" stroke-dasharray="5 4"/>
+  <rect x="640" y="136" width="3" height="40" rx="1.5" fill="#139089"/>
+
+  <g font-size="20">
+    <rect x="24" y="224" width="128" height="48" rx="24" fill="#E2F3F1" stroke="#139089" stroke-width="1.5"/>
+    <path d="M46 248 L54 256 L68 240" fill="none" stroke="#139089" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="80" y="255" fill="#0E6F6A" font-weight="600">整理</text>
+    <rect x="166" y="224" width="120" height="48" rx="24" fill="#FFFFFF" stroke="#D5DAE0" stroke-width="1.5"/>
+    <text x="226" y="255" fill="#2B3036" text-anchor="middle">更正式</text>
+    <rect x="300" y="224" width="120" height="48" rx="24" fill="#FFFFFF" stroke="#D5DAE0" stroke-width="1.5"/>
+    <text x="360" y="255" fill="#2B3036" text-anchor="middle">更简短</text>
+    <rect x="434" y="224" width="108" height="48" rx="24" fill="#FFFFFF" stroke="#D5DAE0" stroke-width="1.5"/>
+    <text x="488" y="255" fill="#2B3036" text-anchor="middle">翻译</text>
+  </g>
+  <text x="1528" y="255" font-size="16" fill="#8A929B" text-anchor="end">AI 整理在本机完成 · 已去除口头语与重复</text>
+
+  <g>
+    <text x="776" y="316" font-size="18" fill="#7A828B" text-anchor="middle">00:07</text>
+    <circle cx="776" cy="420" r="104" fill="#139089" fill-opacity="0.08"/>
+    <circle cx="776" cy="420" r="90" fill="none" stroke="#139089" stroke-opacity="0.22" stroke-width="2"/>
+    <circle cx="776" cy="420" r="74" fill="#139089"/>
+    <rect x="762" y="378" width="28" height="50" rx="14" fill="#FFFFFF"/>
+    <path d="M748 414 A28 28 0 0 0 804 414" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+    <line x1="776" y1="442" x2="776" y2="458" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+    <line x1="762" y1="460" x2="790" y2="460" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+    <g fill="#139089">
+      <rect x="548" y="410" width="6" height="20" rx="3" fill-opacity="0.35"/>
+      <rect x="564" y="398" width="6" height="44" rx="3" fill-opacity="0.45"/>
+      <rect x="580" y="388" width="6" height="64" rx="3" fill-opacity="0.55"/>
+      <rect x="596" y="402" width="6" height="36" rx="3" fill-opacity="0.65"/>
+      <rect x="612" y="378" width="6" height="84" rx="3" fill-opacity="0.75"/>
+      <rect x="628" y="394" width="6" height="52" rx="3" fill-opacity="0.85"/>
+      <rect x="644" y="372" width="6" height="96" rx="3"/>
+      <rect x="660" y="390" width="6" height="60" rx="3"/>
+      <rect x="676" y="404" width="6" height="32" rx="3"/>
+      <rect x="870" y="404" width="6" height="32" rx="3"/>
+      <rect x="886" y="386" width="6" height="68" rx="3"/>
+      <rect x="902" y="376" width="6" height="88" rx="3"/>
+      <rect x="918" y="396" width="6" height="48" rx="3" fill-opacity="0.85"/>
+      <rect x="934" y="382" width="6" height="76" rx="3" fill-opacity="0.75"/>
+      <rect x="950" y="400" width="6" height="40" rx="3" fill-opacity="0.65"/>
+      <rect x="966" y="390" width="6" height="60" rx="3" fill-opacity="0.55"/>
+      <rect x="982" y="402" width="6" height="36" rx="3" fill-opacity="0.45"/>
+      <rect x="998" y="412" width="6" height="16" rx="3" fill-opacity="0.35"/>
+    </g>
+    <text x="776" y="560" font-size="19" fill="#5F6770" text-anchor="middle">正在听… 点麦克风暂停，点“确认”上屏</text>
+  </g>
+
+  <rect x="0" y="592" width="1552" height="96" fill="#FFFFFF"/>
+  <rect x="0" y="592" width="1552" height="1" fill="#E2E6EA"/>
+
+  <g>
+    <rect x="24" y="612" width="124" height="56" rx="14" fill="#F3F5F7" stroke="#D5DAE0" stroke-width="1.5"/>
+    <rect x="42" y="628" width="34" height="24" rx="4" fill="none" stroke="#2B3036" stroke-width="2"/>
+    <g fill="#2B3036">
+      <rect x="47" y="633" width="4" height="4" rx="1"/>
+      <rect x="55" y="633" width="4" height="4" rx="1"/>
+      <rect x="63" y="633" width="4" height="4" rx="1"/>
+      <rect x="47" y="640" width="4" height="4" rx="1"/>
+      <rect x="55" y="640" width="4" height="4" rx="1"/>
+      <rect x="63" y="640" width="4" height="4" rx="1"/>
+      <rect x="51" y="646" width="16" height="3" rx="1.5"/>
+    </g>
+    <text x="86" y="648" font-size="19" fill="#2B3036">键盘</text>
+
+    <rect x="164" y="612" width="264" height="56" rx="14" fill="#F3F5F7" stroke="#D5DAE0" stroke-width="1.5"/>
+    <rect x="170" y="618" width="124" height="44" rx="10" fill="#FFFFFF" stroke="#139089" stroke-width="1.5"/>
+    <text x="232" y="648" font-size="19" fill="#0E6F6A" font-weight="600" text-anchor="middle">26键</text>
+    <line x1="296" y1="626" x2="296" y2="654" stroke="#D5DAE0" stroke-width="1.5"/>
+    <text x="362" y="648" font-size="19" fill="#2B3036" text-anchor="middle">九宫格</text>
+
+    <text x="446" y="647" font-size="15" fill="#8A929B">随时切回手打</text>
+
+    <rect x="1096" y="612" width="176" height="56" rx="14" fill="#FFFFFF" stroke="#C9CFD6" stroke-width="1.5"/>
+    <path d="M1140 630 L1156 646 M1156 630 L1140 646" stroke="#5F6770" stroke-width="2.5" stroke-linecap="round" transform="translate(0 2)"/>
+    <text x="1172" y="648" font-size="20" fill="#2B3036">取消</text>
+
+    <rect x="1288" y="612" width="240" height="56" rx="14" fill="#139089"/>
+    <path d="M1360 640 L1370 650 L1388 630" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="1400" y="648" font-size="20" fill="#FFFFFF" font-weight="600">确认</text>
+    <text x="1446" y="647" font-size="15" fill="#D6F0EE">上屏</text>
+  </g>
+</svg>

@@ -24,13 +24,16 @@ public final class SpeechEndpointDetectorTest {
     }
     private static void timesOutWithoutSpeech() {
         SpeechEndpointDetector d=new SpeechEndpointDetector(16000);
-        check(feed(d,(short)20,8200)==SpeechEndpointDetector.Decision.NO_SPEECH_TIMEOUT,"no speech timeout");
+        check(feed(d,(short)20,4800)==SpeechEndpointDetector.Decision.CONTINUE,
+                "brief initial silence must still allow speech");
+        check(feed(d,(short)20,300)==SpeechEndpointDetector.Decision.NO_SPEECH_TIMEOUT,
+                "five seconds without speech exits instead of looking frozen");
     }
     private static void enforcesLongSafetyCeiling() {
         SpeechEndpointDetector d=new SpeechEndpointDetector(16000);
         feed(d,(short)2200,400);
-        check(feed(d,(short)2200,600000)==SpeechEndpointDetector.Decision.MAX_DURATION,
-                "ten minute safety ceiling");
+        check(feed(d,(short)2200,120000)==SpeechEndpointDetector.Decision.MAX_DURATION,
+                "two minute safety ceiling matches capture client");
     }
     private static SpeechEndpointDetector.Decision feed(SpeechEndpointDetector d,short value,int millis) {
         short[] block=new short[160]; java.util.Arrays.fill(block,value);

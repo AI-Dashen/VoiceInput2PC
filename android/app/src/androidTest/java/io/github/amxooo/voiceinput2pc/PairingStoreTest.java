@@ -34,6 +34,20 @@ public final class PairingStoreTest extends AndroidTestCase {
                 PairingConfig.TRANSPORT_AUTO, "tc" + repeat('Z', 32), deviceId);
     }
 
+    public void testRegisterDoesNotChangeActiveOutput() {
+        PairingConfig first=lan("first-pc.local",'a'), second=lan("second-pc.local",'b');
+        assertTrue(PairingStore.register(preferences,first));
+        assertNull(PairingStore.load(preferences));
+        assertTrue(PairingStore.save(preferences,first));
+        assertTrue(PairingStore.register(preferences,second));
+        assertEquals(first,PairingStore.load(preferences));
+        assertEquals(2,PairingStore.list(preferences).size());
+        PairingConfig updated=new PairingConfig(first.host,9444,repeat('U',32),first.fingerprint);
+        assertTrue(PairingStore.register(preferences,updated));
+        assertEquals(first,PairingStore.load(preferences));
+        assertTrue(PairingStore.list(preferences).contains(updated));
+    }
+
     public void testMultipleDevicesAndSelectionKeepAllRecords() throws Exception {
         PairingConfig first = lan("first-pc.local", 'a');
         PairingConfig second = lan("second-pc.local", 'b');

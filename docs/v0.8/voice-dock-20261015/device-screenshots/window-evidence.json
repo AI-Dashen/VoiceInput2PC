@@ -1,0 +1,9 @@
+{
+  "package": "io.github.amxooo.voiceinput2pc.v08probe",
+  "default_ime_matches": true,
+  "microphone_used": false,
+  "dock_keyboard_bounds": "1038 2315 1219 2469",
+  "dock_host_visible_frame": "0 141 1272 2716",
+  "keyboard_host_visible_frame": "0 141 1272 1634",
+  "result": "PASS"
+}

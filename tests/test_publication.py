@@ -16,8 +16,8 @@ class PublicIdentityTests(unittest.TestCase):
         desktop = (ROOT / 'receiver_app.py').read_text(encoding='utf-8')
 
         self.assertIn("applicationId 'io.github.amxooo.voiceinput2pc'", build)
-        self.assertIn('versionCode 10', build)
-        self.assertIn("versionName '0.8.0-local-input'", build)
+        self.assertIn('versionCode 42', build)
+        self.assertIn("versionName '0.8.32-t9-segment'", build)
         self.assertIn("rootProject.name = 'VoiceInput2PC'", settings)
         self.assertIn('android:label="@string/app_name"', manifest)
         self.assertIn("'app_name', '万能输入法'", build)

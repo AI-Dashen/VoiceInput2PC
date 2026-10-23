@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-15T14:06:44.220791+00:00",
+  "version": "0.8.1-editing-history",
+  "scope": "editing/history and first-syllable T9",
+  "host_tests": {
+    "count": 26,
+    "exit_code": 0,
+    "log": "build/ime-host-tests.log"
+  },
+  "android_instrumentation": {
+    "count": 7,
+    "result": "PASS",
+    "scope": "real Android widgets/view lifecycle, isolated SQLite readback, packaged JNI/Rime; not full manual cross-app flow",
+    "log": "build/ime-device-regression-final.log"
+  },
+  "build": "PASS",
+  "installation": "PASS",
+  "apk": {
+    "bytes": 239591431,
+    "sha256": "76381825a3de9f5ded2fc14c2bed6199e26c0b99478046c5f14c362afa72a8c6",
+    "shared_path": "/storage/emulated/0/Pictures/CodexCamera/MobileAI-Exports/万能输入法-v0.8.1-编辑与记录完善.apk"
+  },
+  "pending": [
+    "manual multi-app keyboard editing and real microphone mixed input regression",
+    "long sequences, keyboard feel and latency",
+    "full per-segment T9 constraints beyond first-syllable selection"
+  ],
+  "incident": {
+    "observation": "Termux process uptime about34min and background codex about27h; foreground Codex client restarted at around22:05",
+    "root_cause": "UNKNOWN",
+    "no_claim": "not enough evidence for Termux process crash or OOM"
+  }
+}

@@ -11,6 +11,23 @@ import org.json.JSONArray;
 
 /** Query/export boundary checks against a uniquely named database, never real history. */
 public final class HistoryQueryTest extends AndroidTestCase {
+    public void testSourceFilterMatchesSummaryAndExportWithoutMigration()throws Exception {
+        RenamingDelegatingContext c=new RenamingDelegatingContext(getContext(),"source-filter-"+UUID.randomUUID()+"-");
+        InputHistoryStore store=new InputHistoryStore(c);
+        try {
+            store.record("voice","ime_voice","本机","LOCAL_COMMITTED","v",1,"语音样本");
+            store.record("keyboard","ime_pinyin","本机","LOCAL_COMMITTED","k",1,"键盘样本");
+            store.record("computer","ime_remote","pc","ACKNOWLEDGED","p",1,"电脑样本");
+            for(String group:new String[]{"voice","keyboard","computer"}) {
+                assertEquals(1,store.summary("",0,Long.MAX_VALUE,group).recordCount);
+                try(Cursor result=store.search("",0,Long.MAX_VALUE,Long.MAX_VALUE,6,group)){assertEquals(1,result.getCount());}
+                StringWriter output=new StringWriter();assertEquals(1,store.export(output,"json","",0,Long.MAX_VALUE,group));
+                assertEquals(1,new JSONArray(output.toString()).length());
+            }
+            assertEquals(3,store.summary("",0,Long.MAX_VALUE).recordCount);
+            try{store.summary("",0,Long.MAX_VALUE,"invalid");fail("unknown group accepted");}catch(IllegalArgumentException expected){}
+        } finally {store.close();}
+    }
     public void testInclusiveDatesAndInvalidDates() {
         HistoryDateRange day = HistoryDateRange.parse("2026-10-12", "2026-10-12");
         assertTrue(day.until >= day.since);

@@ -1,0 +1,12 @@
+{
+  "version": "0.8.24-unified-leaf",
+  "local_tests": {
+    "keyboard": 4,
+    "input_session": 3,
+    "icon_policy": 2
+  },
+  "device_verification": "PENDING",
+  "android_instrumentation": "BUILD_ONLY",
+  "model_changed": false,
+  "system_changed": false
+}

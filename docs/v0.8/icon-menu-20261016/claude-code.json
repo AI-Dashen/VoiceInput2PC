@@ -1,0 +1,9 @@
+{
+  "provider": "claude",
+  "status": "timeout",
+  "duration": 180.141,
+  "exit_code": 124,
+  "stdout": "",
+  "stderr": "Timed out after 180000 ms",
+  "attempts": 2
+}

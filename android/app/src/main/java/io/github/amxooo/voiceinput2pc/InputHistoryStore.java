@@ -26,11 +26,20 @@ final class InputHistoryStore extends SQLiteOpenHelper {
         SQLiteDatabase db = getWritableDatabase();
         db.beginTransaction();
         try {
+            // An explicit ID describes an event, not its text. Keep two identical
+            // real commits, but ignore a replay even if another event intervened.
+            if (!messageId.isEmpty()) {
+                try (Cursor duplicate = db.rawQuery("SELECT 1 FROM events WHERE logical_session=? "
+                        + "AND source=? AND device=? AND status=? AND message_id=? AND seq=? AND text=? LIMIT 1",
+                        new String[]{logicalSession, source, device, status, messageId, Long.toString(seq), text})) {
+                    if (duplicate.moveToFirst()) { db.setTransactionSuccessful(); return; }
+                }
+            }
             int revision = 1;
             try (Cursor last = db.rawQuery("SELECT revision,text,status,message_id,seq FROM events "
                     + "WHERE logical_session=? ORDER BY id DESC LIMIT 1", new String[]{logicalSession})) {
                 if (last.moveToFirst()) {
-                    if (text.equals(last.getString(1)) && status.equals(last.getString(2))
+                    if (messageId.isEmpty() && text.equals(last.getString(1)) && status.equals(last.getString(2))
                             && messageId.equals(last.getString(3)) && seq == last.getLong(4)) {
                         db.setTransactionSuccessful(); return;
                     }
@@ -45,13 +54,77 @@ final class InputHistoryStore extends SQLiteOpenHelper {
         } finally { db.endTransaction(); }
     }
     synchronized Cursor search(String keyword, long since, long until, long beforeId, int pageSize) {
+        return search(keyword,since,until,beforeId,pageSize,"");
+    }
+    synchronized Cursor search(String keyword,long since,long until,long beforeId,int pageSize,String group) {
         if (since < 0 || until < since || beforeId < 1 || pageSize < 1 || pageSize > 200)
             throw new IllegalArgumentException("Invalid history query");
         return getReadableDatabase().rawQuery("SELECT * FROM events WHERE instr(text,?)>0 "
-            + "AND created>=? AND created<=? AND id<? ORDER BY id DESC LIMIT ?",
+            + "AND created>=? AND created<=? AND id<?" + sourceFilter(group) + " ORDER BY id DESC LIMIT ?",
             new String[]{keyword, Long.toString(since), Long.toString(until), Long.toString(beforeId), Integer.toString(pageSize)});
     }
+    /** Saved events include snapshots, revisions and delivery failures, not net typing. */
+    static final class Summary {
+        final long recordCount, codePointCount;
+        Summary(long recordCount, long codePointCount) {
+            this.recordCount = recordCount; this.codePointCount = codePointCount;
+        }
+    }
+    synchronized Summary summary(String keyword, long since, long until) {
+        return summary(keyword,since,until,"");
+    }
+    synchronized Summary summary(String keyword,long since,long until,String group) {
+        if (since < 0 || until < since) throw new IllegalArgumentException("Invalid history range");
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT COUNT(*),COALESCE(SUM(length(text)),0) "
+                + "FROM events WHERE instr(text,?)>0 AND created>=? AND created<=?" + sourceFilter(group),
+                new String[]{keyword, Long.toString(since), Long.toString(until)})) {
+            c.moveToFirst(); return new Summary(c.getLong(0), c.getLong(1));
+        }
+    }
+    private static String sourceFilter(String group) {
+        if(group==null || group.isEmpty())return "";
+        switch(group) {
+            case "voice":return " AND source='ime_voice'";
+            case "keyboard":return " AND source IN ('ime_keyboard','ime_pinyin','ime_t9','ime_local')";
+            case "computer":return " AND source IN ('ime_remote','phone_ime','pc_clipboard')";
+            default:throw new IllegalArgumentException("Invalid source group");
+        }
+    }
+    static String sourceLabel(String source) {
+        if (source == null) return "其他输入";
+        switch (source) {
+            case "ime_keyboard": return "键盘输入";
+            case "ime_pinyin": return "拼音输入";
+            case "ime_t9": return "九键输入";
+            case "ime_voice": return "语音输入";
+            case "ime_local": return "本机输入";
+            case "ime_remote": return "输入法发送到电脑";
+            case "phone_ime": return "电脑输入工作区";
+            case "pc_clipboard": return "电脑剪贴板";
+            default: return "其他输入";
+        }
+    }
+    static String statusLabel(String status) {
+        if (status == null) return "已保存记录";
+        switch (status.toUpperCase(java.util.Locale.ROOT)) {
+            case "INSERTED": case "LOCAL_COMMITTED": return "已输入";
+            case "LOCAL": return "已保存本机记录";
+            case "SAVED_NOT_INSERTED": return "已保存，尚未输入";
+            case "REJECTED": return "发送被拒绝";
+            case "DELIVERY_UNKNOWN": return "发送结果待确认";
+            case "QUEUED": return "等待发送";
+            case "EDIT_CONFLICT": return "修改待确认";
+            case "ACTIVE": return "输入中保存的草稿";
+            case "PAUSED": return "已暂停的草稿";
+            case "ACKNOWLEDGED": return "电脑已确认接收";
+            default: return "已保存记录";
+        }
+    }
     int export(Writer out, String format, String keyword, long since, long until) throws Exception {
+        return export(out,format,keyword,since,until,"");
+    }
+    int export(Writer out,String format,String keyword,long since,long until,String group) throws Exception {
+        sourceFilter(group);
         if (!(format.equals("txt") || format.equals("md") || format.equals("json") || format.equals("csv"))
                 || since < 0 || until < since) throw new IllegalArgumentException("Invalid history export");
         long snapshotId;
@@ -62,7 +135,7 @@ final class InputHistoryStore extends SQLiteOpenHelper {
         if (format.equals("json")) out.write("[");
         if (format.equals("csv")) out.write("id,created,logical_session,revision,source,device,status,message_id,seq,text\r\n");
         try (Cursor c = getReadableDatabase().rawQuery("SELECT * FROM events WHERE instr(text,?)>0 "
-                + "AND created>=? AND created<=? AND id<=? ORDER BY id", new String[]{keyword, Long.toString(since), Long.toString(until),Long.toString(snapshotId)})) {
+                + "AND created>=? AND created<=? AND id<=?"+sourceFilter(group)+" ORDER BY id", new String[]{keyword, Long.toString(since), Long.toString(until),Long.toString(snapshotId)})) {
             while (c.moveToNext()) {
                 JSONObject item = new JSONObject();
                 for (int i=0; i<c.getColumnCount(); i++) {
@@ -81,10 +154,8 @@ final class InputHistoryStore extends SQLiteOpenHelper {
                     out.write("\r\n");
                 } else {
                     String stamp = java.time.Instant.ofEpochMilli(item.getLong("created")).toString();
-                    out.write((format.equals("md") ? "\n## " : "") + stamp + " · " + item.getString("status") + "\n");
-                    out.write("来源："+item.getString("source")+" · 会话："+item.getString("logical_session")
-                        +" · 修订："+item.getLong("revision")+" · 设备："+item.getString("device")
-                        +" · 消息："+item.getString("message_id")+" · 顺序："+item.getLong("seq")+"\n");
+                    out.write((format.equals("md") ? "\n## " : "") + stamp + " · " + statusLabel(item.getString("status")) + "\n");
+                    out.write("来源："+sourceLabel(item.getString("source"))+" · 修订："+item.getLong("revision")+"\n");
                     String text=item.getString("text");
                     if (format.equals("md")) for (String line:text.split("\n",-1)) out.write("    "+line+"\n");
                     else out.write(text+"\n\n");

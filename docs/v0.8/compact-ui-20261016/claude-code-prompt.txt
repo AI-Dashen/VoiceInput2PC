@@ -1,0 +1,8 @@
+这次请实际编写代码，不是评审。你负责一个可直接集成的纯Java模块CompactImeUiPolicy及其测试；Codex负责把你的原文代码写入文件、接入Android并验收。只输出JSON对象，键java、test_java、notes，不要Markdown围栏。java是完整类源码，包名io.github.amxooo.voiceinput2pc；test_java为同包可java执行main的测试类CompactImeUiPolicyTest，失败throw AssertionError。
+已有InputSession.State：IDLE、LISTENING、RECOGNIZING、PREVIEW（不要引用不存在状态，只需用两个busy态比对）。
+要求API精确：
+public static final int MIC_TOUCH_DP=48, MIC_DIAMETER_DP=36, DOCK_BOTTOM_DP=80;
+public static int keyboardHeightDp(boolean landscape, boolean composing, boolean remote)：竖屏220横屏188，组字增加48，远端草稿增加48；不能重复累加状态。
+public static int microphoneColor(InputSession.State state)：LISTENING珊瑚红0xffc83a41，RECOGNIZING琥珀0xffb9801e，其余灰蓝0xff60707e；不依赖android.graphics.Color。
+public static boolean canRunEditorAction(InputSession.State state, boolean remote, boolean remoteCanSend)：LISTENING/RECOGNIZING禁止，其余本机允许/远端仅remoteCanSend。
+测试验证竖横屏组字/远端布局、语音活跃阶段无论目标不可发送、PREVIEW允许重试操作、48dp热区>=36图标，不要求JUnit。不要扩大功能，不读文件/网络/执行shell。API为共同约定须保持。

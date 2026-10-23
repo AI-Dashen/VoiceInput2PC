@@ -1,0 +1,10 @@
+{
+  "repo": "osfans/trime",
+  "commit": "c7f32b6cca4d86ec43d6782e7c70f6700e8baa07",
+  "paths": [
+    "app/src/main/java/com/osfans/trime/ime/core/TrimeInputMethodService.kt",
+    "app/src/main/java/com/osfans/trime/ime/composition/PreeditDelegate.kt",
+    "app/src/main/java/com/osfans/trime/ime/keyboard/CommonKeyboardActionListener.kt"
+  ],
+  "scope": "source reading, not live execution"
+}

@@ -1,0 +1,105 @@
+{
+  "date": "2026-10-16",
+  "version": "0.8.11-gesture-editing",
+  "version_code": 21,
+  "package": "io.github.amxooo.voiceinput2pc.v08probe",
+  "status": "VERIFIED",
+  "scope": "Own Android IME + own fixture EditText; not WeChat or ChatGPT compatibility certification",
+  "policy_checks": 43,
+  "android_tests": 47,
+  "android_elapsed_seconds": 16.326,
+  "real_window": {
+    "steps": [
+      {
+        "phase": "default",
+        "uptime_ms": 117953131
+      },
+      {
+        "phase": "keyboard",
+        "uptime_ms": 117953905
+      },
+      {
+        "phase": "voice-return",
+        "uptime_ms": 117955070
+      },
+      {
+        "phase": "punctuation-menu",
+        "uptime_ms": 117955623
+      },
+      {
+        "phase": "punctuation",
+        "uptime_ms": 117956070
+      },
+      {
+        "phase": "empty-start",
+        "uptime_ms": 117956597
+      },
+      {
+        "phase": "selection",
+        "uptime_ms": 117957079
+      }
+    ],
+    "package": "io.github.amxooo.voiceinput2pc.v08probe",
+    "scope": "Actual OS-bound IME with own fixture editor; no recording or sending requested",
+    "default_ime_matches": true,
+    "initial_target_local": true,
+    "initial_delete_visible": true,
+    "initial_delete_enabled": true,
+    "default_before_capture": "1099 2100 1267 2268",
+    "default_after_capture": "1099 2100 1267 2268",
+    "default_fresh_target": {
+      "uptime_ms": 117953259,
+      "mic_bounds": "1099 2100 1267 2268",
+      "ime_window_bounds": "1099 1932 1267 2436"
+    },
+    "double_tap_mic_bounds": "1099 2100 1267 2268",
+    "double_tap_injection_target": {
+      "uptime_ms": 117953260,
+      "mic_bounds": "1099 2100 1267 2268",
+      "ime_window_bounds": "1099 1932 1267 2436"
+    },
+    "double_tap_recording_ui_observed": false,
+    "voice-return_before_capture": "1099 2100 1267 2268",
+    "voice-return_after_capture": "1099 2100 1267 2268",
+    "voice-return_fresh_target": {
+      "uptime_ms": 117955198,
+      "mic_bounds": "1099 2100 1267 2268",
+      "ime_window_bounds": "1099 1932 1267 2436"
+    },
+    "swipe_injection_target": {
+      "uptime_ms": 117955200,
+      "mic_bounds": "1099 2100 1267 2268",
+      "ime_window_bounds": "1099 1932 1267 2436"
+    },
+    "swipe_mic_bounds": "1099 2100 1267 2268",
+    "period_bounds": "712 1904 852 2072",
+    "period_after_capture_bounds": "712 1904 852 2072",
+    "own_fixture_text_after_swipe": "Baseline。",
+    "result": "PASS",
+    "elapsed_ms": 5919
+  },
+  "build": "BUILD SUCCESSFUL",
+  "apk": {
+    "path": "/storage/emulated/0/Pictures/CodexCamera/MobileAI-Exports/万能输入法-v0.8.11-手势与标点.apk",
+    "bytes": 239684557,
+    "sha256": "8f3038713314bdf49d158375f2914bfb94869aa6eccb5c7b28e4ab66e99ce950",
+    "readback_match": true
+  },
+  "screenshots": [
+    "default.png",
+    "empty-start.png",
+    "keyboard.png",
+    "punctuation-menu.png",
+    "punctuation.png",
+    "selection.png",
+    "voice-return.png"
+  ],
+  "pending": [
+    "WeChat initial caret painting",
+    "ChatGPT intermittent copy selection menu",
+    "Full-screen drag outside current IME window"
+  ],
+  "system_changes": false,
+  "microphone_e2e": "Unchanged engine; new ASR transaction tests use fake producer, no new live microphone recording",
+  "git_commit_push": false
+}

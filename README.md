@@ -2,10 +2,11 @@
 
 ## 0.8 本地输入法开发源码
 
-本分支已同步手机上的 `0.8.0-local-input`（versionCode 10）开发源码，替代此前仅有的 Probe A。输入法是主体，向电脑传输文字是输出能力之一；包含语音草稿、九宫格、26键、符号、编辑器会话隔离、Rime JNI和跨设备输出路由。
+本分支已同步手机上的 `0.8.32-t9-segment`（versionCode 42）开发源码，替代此前仅有的 Probe A。输入法是主体，向电脑传输文字是输出能力之一；包含语音草稿、九宫格、26键、符号、编辑器会话隔离、Rime JNI和跨设备输出路由。
 
 - [输入法架构与版本](docs/INPUT_METHOD.md)
 - [源码构建前提、依赖与本次验证](docs/v0.8/SOURCE_DELIVERY_2026-10-15.md)
+- [当前代码审查交接说明](docs/v0.8/CURRENT_REVIEW_HANDOFF_2026-10-23.md)
 - [0.7 Android / Windows 测试版下载](https://github.com/AI-Dashen/VoiceInput2PC/releases/tag/v0.7.0-testing)
 
 **源码已上传不等于模型开放或完整APK公开发布。** 不包含闭源ASR模型/运行库、原始录音、个人配对信息和编译产物。直接克隆仍需按构建说明准备依赖；现有本机依赖环境的构建结果单独记录。

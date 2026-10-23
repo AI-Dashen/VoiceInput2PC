@@ -1,0 +1,9 @@
+{
+  "provider": "claude",
+  "status": "success",
+  "duration": 17.893,
+  "exit_code": 0,
+  "stdout": "# Claude状态机审查（取消/停止/换框/编辑/重复final/模型复用/后台）\n\n**前提**：以下均为设计建议，需由Codex验证。Termux中已经成功，不代表APK中已经成功。\n\n**1. 状态与键**\n- 状态建议定为：Idle → Recording → Finishing（已发送最后块，等待tail_vad=2）→ Stopping（Wait_Stop2602）→ Finalized/Cancelled → Idle。\n- 每条IPC消息都携带(generation, sessionId, editorToken)。editorToken由`EditorInfo.fieldId + packageName + onStartInput`时的计数组成。\n- 三元组任一项不匹配，结果一律丢弃。\n\n**2. 取消与停止**\n- 取消时立即停止AudioRecord，并标记cancelled。ASR侧仍须走完finish→Wait_Stop→Destroy，不要直接Destroy中途的会话，否则可能导致原库状态损坏。\n- 取消后到达的final结果只用于释放资源，不提交到输入框。\n- 停止和取消都必须幂等，连续按两次不能发两次finish。\n\n**3. 输入框变化**\n- 以下回调都视同取消：`onFinishInput`、`onStartInput(restarting=false)`、`onFinishInputView`、`onWindowHidden`。\n- `restarting=true`且fieldId相同时，可以保持会话，但要重新校验editorToken。\n- 提交前检查`getCurrentInputConnection()`非空，且token仍然匹配。\n\n**4. 混合编辑**\n- partial结果只用`setComposingText`显示；final结果用`commitText`一次性替换composing。\n- 用户在录音期间手动输入时，有两种做法：\n  - 先`finishComposingText`固化partial，后续final只追加新增部分；\n  - 或在Rime组合中禁止语音提交。\n- Rime组合与ASR composing不能共存，需要一个单一的ComposingOwner标记。\n- 跟踪`onUpdateSelection`。光标被外部移动后，丢弃partial，final改为在新光标处插入。\n\n**5. 重复final**\n- final和SessionFinished可能都带有文本，以SessionFinished为唯一提交点，或用`committed`布尔标记去重。\n- 进程重连后，旧Binder回调需要按generation过滤。\n\n**6. 模型复用**\n- 模型约185MB，RSS峰值604MiB，应在:local_asr中常驻（load一次），每个会话只做Create/Destroy。\n- 只在以下情况Unload：`onTrimMemory(≥RUNNING_LOW)`、空闲超时（如60秒）、Service销毁。\n- 加载期间到来的会话请求进入排队，不并发加载。\n\n**7. 后台工作**\n- IME不可见时禁止开启录音，以符合Android 14+对后台麦克风的限制。\n- 断开Binder时主进程置为Idle。若`linkToDeath`触发，丢弃本会话，下次重连时重新加载模型。\n\n**待验证**\n- APK内:local_asr进程能否dlopen该库。\n- 取消路径Wait_Stop的耗时。\n- 重复final实际是否会出现。",
+  "stderr": "",
+  "attempts": 1
+}

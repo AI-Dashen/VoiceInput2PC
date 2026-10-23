@@ -1,0 +1,38 @@
+
+analysis/doubao-ime-20261013/apk/lib/libshell.so:	file format elf64-littleaarch64
+
+Disassembly of section .text:
+
+000000000019ff14 <shell::ShellImpl::SelectUsrSyllableFilter(std::__ndk1::basic_string<char, std::__ndk1::char_traits<char>, std::__ndk1::allocator<char>> const&)>:
+  19ff14: d10183ff     	sub	sp, sp, #0x60
+  19ff18: f9001bf5     	str	x21, [sp, #0x30]
+  19ff1c: a9044ff4     	stp	x20, x19, [sp, #0x40]
+  19ff20: a9057bfd     	stp	x29, x30, [sp, #0x50]
+  19ff24: 910143fd     	add	x29, sp, #0x50
+  19ff28: d53bd055     	mrs	x21, TPIDR_EL0
+  19ff2c: f94016a8     	ldr	x8, [x21, #0x28]
+  19ff30: aa0003f3     	mov	x19, x0
+  19ff34: f90017e8     	str	x8, [sp, #0x28]
+  19ff38: f9401400     	ldr	x0, [x0, #0x28]
+  19ff3c: b4000660     	cbz	x0, 0x1a0008 <shell::ShellImpl::SelectUsrSyllableFilter(std::__ndk1::basic_string<char, std::__ndk1::char_traits<char>, std::__ndk1::allocator<char>> const&)+0xf4>
+  19ff40: 910063e8     	add	x8, sp, #0x18
+  19ff44: aa0103f4     	mov	x20, x1
+  19ff48: 97fb82b2     	bl	0x80a10 <_ZN5shell9InputMode15GetInputContextEv@plt>
+  19ff4c: f9401660     	ldr	x0, [x19, #0x28]
+  19ff50: 97fb8034     	bl	0x80020 <_ZN5shell9InputMode10GetImeDataEv@plt>
+  19ff54: aa1403e1     	mov	x1, x20
+  19ff58: 97fb8162     	bl	0x804e0 <_ZN5shell7ImeData27InsertUserSyllableFilterSeqERKNSt6__ndk112basic_stringIcNS1_11char_traitsIcEENS1_9allocatorIcEEEE@plt>
+  19ff5c: b9400a68     	ldr	w8, [x19, #0x8]
+  19ff60: 7100051f     	cmp	w8, #0x1
+  19ff64: 54000341     	b.ne	0x19ffcc <shell::ShellImpl::SelectUsrSyllableFilter(std::__ndk1::basic_string<char, std::__ndk1::char_traits<char>, std::__ndk1::allocator<char>> const&)+0xb8>
+  19ff68: 97fb7d86     	bl	0x7f580 <_ZN5shell12ConvertUtils8InstanceEv@plt>
+  19ff6c: a941a3e9     	ldp	x9, x8, [sp, #0x18]
+  19ff70: a900a3e9     	stp	x9, x8, [sp, #0x8]
+  19ff74: b40000c8     	cbz	x8, 0x19ff8c <shell::ShellImpl::SelectUsrSyllableFilter(std::__ndk1::basic_string<char, std::__ndk1::char_traits<char>, std::__ndk1::allocator<char>> const&)+0x78>
+  19ff78: 91002108     	add	x8, x8, #0x8
+  19ff7c: c85f7d09     	ldxr	x9, [x8]
+  19ff80: 91000529     	add	x9, x9, #0x1
+  19ff84: c80a7d09     	stxr	w10, x9, [x8]
+  19ff88: 35ffffaa     	cbnz	w10, 0x19ff7c <shell::ShellImpl::SelectUsrSyllableFilter(std::__ndk1::basic_string<char, std::__ndk1::char_traits<char>, std::__ndk1::allocator<char>> const&)+0x68>
+  19ff8c: 910023e1     	add	x1, sp, #0x8
+  19ff90: 97fb83bc     	bl	0x80e80 <_ZN5shell12ConvertUtils20UpdatePinyin9LLMCompENSt6__ndk110shared_ptrINS_12InputContextEEE@plt>

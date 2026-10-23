@@ -1,0 +1,103 @@
+{
+  "package": "io.github.amxooo.voiceinput2pc.v08probe",
+  "default_ime_matches": true,
+  "microphone_used": false,
+  "before_expand_geometry_samples": [
+    {
+      "uptime_ms": 111758341,
+      "fresh_node_available": true,
+      "mic_bounds": "1104 2084 1272 2252",
+      "ime_window_bounds": "1104 1916 1272 2420",
+      "ime_window_id": 883,
+      "consecutive_equal_samples": 1
+    },
+    {
+      "uptime_ms": 111758445,
+      "fresh_node_available": true,
+      "mic_bounds": "1104 2084 1272 2252",
+      "ime_window_bounds": "1104 1916 1272 2420",
+      "ime_window_id": 883,
+      "consecutive_equal_samples": 2
+    },
+    {
+      "uptime_ms": 111758549,
+      "fresh_node_available": true,
+      "mic_bounds": "1104 2084 1272 2252",
+      "ime_window_bounds": "1104 1916 1272 2420",
+      "ime_window_id": 883,
+      "consecutive_equal_samples": 3
+    }
+  ],
+  "mic_before_expand": "1104 2084 1272 2252",
+  "ime_window_before_expand": "1104 1916 1272 2420",
+  "ime_window_id_before_expand": 883,
+  "expand_action_uptime_ms": 111758549,
+  "after_expand_geometry_samples": [
+    {
+      "uptime_ms": 111758571,
+      "fresh_node_available": true,
+      "mic_bounds": "1104 2084 1272 2252",
+      "ime_window_bounds": "1104 1916 1272 2420",
+      "ime_window_id": 883,
+      "consecutive_equal_samples": 1
+    },
+    {
+      "uptime_ms": 111758677,
+      "fresh_node_available": true,
+      "mic_bounds": "1104 2084 1272 2252",
+      "ime_window_bounds": "1104 1916 1272 2420",
+      "ime_window_id": 883,
+      "consecutive_equal_samples": 2
+    },
+    {
+      "uptime_ms": 111758780,
+      "fresh_node_available": true,
+      "mic_bounds": "1104 2084 1272 2252",
+      "ime_window_bounds": "1104 1916 1272 2420",
+      "ime_window_id": 883,
+      "consecutive_equal_samples": 3
+    }
+  ],
+  "mic_after_expand": "1104 2084 1272 2252",
+  "ime_window_after_expand": "1104 1916 1272 2420",
+  "ime_window_id_after_expand": 883,
+  "ime_window_unchanged_on_expand": true,
+  "quick_delete_bounds": "1104 1916 1272 2084",
+  "quick_mic_bounds": "1104 2084 1272 2252",
+  "quick_action_bounds": "1104 2252 1272 2420",
+  "quick_action_description": "完成",
+  "quick_anchor_unchanged": true,
+  "primary_collapse_rejected": true,
+  "after_rejected_collapse_geometry_samples": [
+    {
+      "uptime_ms": 111759358,
+      "fresh_node_available": true,
+      "mic_bounds": "1104 2084 1272 2252",
+      "ime_window_bounds": "1104 1916 1272 2420",
+      "ime_window_id": 883,
+      "consecutive_equal_samples": 1
+    },
+    {
+      "uptime_ms": 111759462,
+      "fresh_node_available": true,
+      "mic_bounds": "1104 2084 1272 2252",
+      "ime_window_bounds": "1104 1916 1272 2420",
+      "ime_window_id": 883,
+      "consecutive_equal_samples": 2
+    },
+    {
+      "uptime_ms": 111759566,
+      "fresh_node_available": true,
+      "mic_bounds": "1104 2084 1272 2252",
+      "ime_window_bounds": "1104 1916 1272 2420",
+      "ime_window_id": 883,
+      "consecutive_equal_samples": 3
+    }
+  ],
+  "mic_after_collapse": "1104 2084 1272 2252",
+  "ime_window_after_collapse": "1104 1916 1272 2420",
+  "dock_keyboard_bounds": "589 2273 757 2441",
+  "dock_host_visible_frame": "0 141 1272 2716",
+  "keyboard_host_visible_frame": "0 141 1272 1816",
+  "result": "PASS"
+}

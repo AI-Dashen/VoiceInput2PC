@@ -49,21 +49,46 @@ JNIEXPORT jlong JNICALL FN(nativeCreate)(JNIEnv *env,jclass clazz,jstring shared
     }
     return (jlong)api->create_session();
 }
+/* Rime offsets are UTF-8 bytes; Android spans use UTF-16 code units. */
+static int utf16_offset(const char *s,int bytes) {
+    if (!s || bytes<=0) return 0;
+    int count=0;
+    for (int i=0;s[i] && i<bytes;i++) {
+        unsigned char c=(unsigned char)s[i];
+        if ((c&0xc0)!=0x80) count += c>=0xf0 ? 2 : 1;
+    }
+    return count;
+}
 JNIEXPORT jobjectArray JNICALL FN(nativeSnapshot)(JNIEnv *env,jclass clazz,jlong id) {
     (void)clazz;
     if (!api || !api->find_session((RimeSessionId)id)) return NULL;
     RIME_STRUCT(RimeContext,ctx);
     if (!api->get_context((RimeSessionId)id,&ctx)) return NULL;
     int n=ctx.menu.num_candidates;
-    jobjectArray result=(*env)->NewObjectArray(env,n+3,(*env)->FindClass(env,"java/lang/String"),NULL);
-    char page[24]; snprintf(page,sizeof(page),"%d",ctx.menu.page_no);
-    const char *base[3]={RIME_PROVIDED(api,get_input)?api->get_input((RimeSessionId)id):(ctx.composition.preedit?ctx.composition.preedit:""),page,ctx.menu.is_last_page?"0":"1"};
-    for (int i=0;i<n+3;i++) {
-        const char *text=i<3?base[i]:ctx.menu.candidates[i-3].text;
+    jobjectArray result=(*env)->NewObjectArray(env,n*2+7,(*env)->FindClass(env,"java/lang/String"),NULL);
+    const char *preedit=ctx.composition.preedit?ctx.composition.preedit:"";
+    char page[24],cursor[24],start[24],end[24];
+    snprintf(page,sizeof(page),"%d",ctx.menu.page_no);
+    snprintf(cursor,sizeof(cursor),"%d",utf16_offset(preedit,ctx.composition.cursor_pos));
+    snprintf(start,sizeof(start),"%d",utf16_offset(preedit,ctx.composition.sel_start));
+    snprintf(end,sizeof(end),"%d",utf16_offset(preedit,ctx.composition.sel_end));
+    const char *base[7]={RIME_PROVIDED(api,get_input)?api->get_input((RimeSessionId)id):preedit,
+        page,ctx.menu.is_last_page?"0":"1",preedit,cursor,start,end};
+    for (int i=0;i<n*2+7;i++) {
+        const char *text=i<7?base[i]:(i%2==1?ctx.menu.candidates[(i-7)/2].text:ctx.menu.candidates[(i-7)/2].comment);
         jstring value=java_utf8(env,text?text:"");
         (*env)->SetObjectArrayElement(env,result,i,value); (*env)->DeleteLocalRef(env,value);
     }
     api->free_context(&ctx); return result;
+}
+JNIEXPORT jboolean JNICALL FN(nativeSetInput)(JNIEnv *env,jclass clazz,jlong id,jstring input) {
+    (void)clazz;
+    if (!api || !RIME_API_AVAILABLE(api,set_input) || !input) return JNI_FALSE;
+    const char *text=(*env)->GetStringUTFChars(env,input,NULL);
+    if (!text) return JNI_FALSE;
+    Bool ok=api->set_input((RimeSessionId)id,text);
+    (*env)->ReleaseStringUTFChars(env,input,text);
+    return ok;
 }
 JNIEXPORT jboolean JNICALL FN(nativeKey)(JNIEnv *env,jclass clazz,jlong id,jint key) {
     (void)env;(void)clazz; return api && api->process_key((RimeSessionId)id,key,0);

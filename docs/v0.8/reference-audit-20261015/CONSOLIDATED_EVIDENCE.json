@@ -1,0 +1,50 @@
+{
+  "at": "2026-10-15T14:27:10.615472+00:00",
+  "version": "0.8.2-input-flows",
+  "scope": "consolidated T9, voice draft editing, deletion, field lifecycle and local history",
+  "host_tests": {
+    "count": 26,
+    "result": "PASS",
+    "log": "build/full-input-host.log"
+  },
+  "android_tests": {
+    "count": 24,
+    "result": "PASS",
+    "log": "build/full-input-final-device.log",
+    "scope": "18 IME flow tests + 4 isolated SQLite history tests + 2 packaged ASR/Rime tests; speech-state tests inject callbacks; one public WAV uses real native ASR"
+  },
+  "offline_asr": {
+    "count": 1,
+    "result": "PASS",
+    "log": "build/full-input-asr-device.log",
+    "scope": "packaged native ASR in Android process, public WAV fixture; not live microphone"
+  },
+  "build": {
+    "result": "PASS",
+    "log": "build/full-input-build.log"
+  },
+  "installation": {
+    "result": "PASS",
+    "log": "build/full-input-install.log"
+  },
+  "apk": {
+    "path": "/storage/emulated/0/Pictures/CodexCamera/MobileAI-Exports/万能输入法-v0.8.2-完整输入流程.apk",
+    "bytes": 239627857,
+    "sha256": "52aeadd4bd21b64a5b2cce1e9a200a291c922273806b154bf2995340577549b4",
+    "readback_matches": true
+  },
+  "pending": [
+    "Live microphone speech in normal use across external apps",
+    "Physical remote computer insertion/Bluetooth relay regression: no connected target in this run",
+    "Long-duration everyday typing and OEM lifecycle stress"
+  ],
+  "not_claimed": [
+    "Full Doubao native algorithm recovery",
+    "Voice model format conversion",
+    "All third-party apps verified"
+  ],
+  "final_review_fixes": [
+    "Asynchronous Rime readiness inherits current no-personalized-learning field policy",
+    "Late old-generation max-duration audio progress cannot stop a newer recording"
+  ]
+}

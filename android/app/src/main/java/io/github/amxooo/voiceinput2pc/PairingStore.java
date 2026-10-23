@@ -81,6 +81,16 @@ public final class PairingStore {
         }
     }
 
+    /** Adds a verified computer without changing the current output target. */
+    public static synchronized boolean register(SharedPreferences preferences, PairingConfig value) {
+        if (preferences == null || value == null) return false;
+        LinkedHashMap<String, Entry> entries = readEntries(preferences);
+        Entry previous = entries.get(identity(value));
+        entries.put(identity(value), new Entry(value, previous == null ? "" : previous.label));
+        try { return preferences.edit().putString(REGISTRY, serialize(entries)).commit(); }
+        catch (JSONException invalid) { return false; }
+    }
+
     public static synchronized boolean save(SharedPreferences preferences, PairingConfig value) {
         if (preferences == null || value == null) return false;
         LinkedHashMap<String, Entry> entries = readEntries(preferences);
@@ -145,7 +155,7 @@ public final class PairingStore {
             // Legacy active fields remain usable even if registry data is damaged.
         }
         PairingConfig active = load(preferences);
-        if (active != null) {
+        if (active != null && !entries.containsKey(identity(active))) {
             Entry saved = entries.get(identity(active));
             entries.put(identity(active), new Entry(active, saved == null ? "" : saved.label));
         }

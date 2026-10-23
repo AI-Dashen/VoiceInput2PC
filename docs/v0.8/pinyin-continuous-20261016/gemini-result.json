@@ -1,0 +1,9 @@
+{
+  "path": "/app/a10872cfb12dadcf",
+  "text": "Gemini 说\n\n聚焦Android InputMethodService 全拼连输断流与候选不更新，提供以下底层复现测试与状态同步方案：\n\n一、 最小复现与区分测试\n\n在宿主App集成独立测试 EditText，模拟 process_key 连续压测：\n\n异步回调冲突测试：用 Handler 延时50ms交替触发 commitText 与模拟 onUpdateSelection。验证当 newSelStart/End 晚于 setComposingText 到达时，clearComposition 是否误杀当前 rawInput。\n\n光标追踪测试：手动点击候选栏外空白处改变光标，断言 onUpdateSelection 中的 oldSelStart != newSelStart 是否与本输入法主动写入的 activeComposing 产生回环冲突。\n\n二、 核心解法：三态防御与时间戳过滤\n\n写入状态加锁：定义 isSelfComposing 布尔锁与 lastWriteTimestamp。在调用 setComposingText 前置 true，在 onUpdateSelection 入口处若 isSelfComposing 为真或 System.currentTimeMillis() - lastWriteTimestamp < 100ms，直接忽略光标位置校准，防止异步回调击穿。\n\n候选与光标解耦：当 activeComposing 非空时，忽略宿主因文本长度突变带来的 onUpdateSelection 清理逻辑；仅当用户发生显式物理点按光标移动（检测到无主动写入行为且光标越界）时，再调用 engine.reset()。",
+  "busy": false,
+  "models": [
+    "Gemini\nFlash-Lite"
+  ],
+  "complete": true
+}

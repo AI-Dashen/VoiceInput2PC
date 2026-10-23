@@ -2,7 +2,7 @@
 schema:
   schema_id: t9
   name: 雾凇九宫格
-  version: '0.8.1'
+  version: '0.8.2'
 switches:
   - name: ascii_mode
     reset: 0
@@ -13,11 +13,18 @@ engine:
   translators: [punct_translator, script_translator]
   filters: [uniquifier]
 speller:
-  alphabet: '23456789'
-  initials: '23456789'
+  alphabet: 'abcdefghijklmnopqrstuvwxyz23456789'
+  initials: 'abcdefghijklmnopqrstuvwxyz23456789'
   delimiter: " '"
   algebra:
-    - xlit/abcdefghijklmnopqrstuvwxyz/22233344455566677778889999/
+    - derive/[abc]/2/
+    - derive/[def]/3/
+    - derive/[ghi]/4/
+    - derive/[jkl]/5/
+    - derive/[mno]/6/
+    - derive/[pqrs]/7/
+    - derive/[tuv]/8/
+    - derive/[wxyz]/9/
 translator:
   dictionary: rime_ice
   prism: t9
