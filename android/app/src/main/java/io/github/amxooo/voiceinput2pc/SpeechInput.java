@@ -5,5 +5,6 @@ interface SpeechInput {
     void start(long generation,OfflineSpeechRecognizer.Listener listener);
     void finish();
     void cancel();
+    default void releaseIdleNow() {}
     void close();
 }

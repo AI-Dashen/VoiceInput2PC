@@ -29,7 +29,13 @@ public final class OfflineSpeechRecognizer implements SafeAudioRecorder.Listener
     private static final long START_ACK_TIMEOUT_MS=10000;
     private static final long MODEL_START_TIMEOUT_MS=120000;
     private static final long RESULT_TIMEOUT_MS=60000;
-    private final Runnable idleRelease=()->{if(!valid)unbind();};
+    /** Keep the large local model warm across short dictation pauses, then really evict it. */
+    private static final long IDLE_MODEL_KEEPALIVE_MS=60000;
+    private final Runnable idleRelease=()->{
+        if(valid)return;
+        transact(LocalAsrService.RELEASE_IDLE,generation,null);
+        unbind();
+    };
     private final Binder callback=new Binder(){
         @Override protected boolean onTransact(int code,Parcel data,Parcel reply,int flags)throws RemoteException{
             if(code!=LocalAsrService.EVENT)return super.onTransact(code,data,reply,flags);
@@ -51,7 +57,7 @@ public final class OfflineSpeechRecognizer implements SafeAudioRecorder.Listener
         cancel();main.removeCallbacks(idleRelease);this.listener=listener;generation=requested;valid=true;finishing=false;requestSent=false;finishSent=false;
         armStartTimeout(requested,START_ACK_TIMEOUT_MS,"本地识别服务未响应，已恢复，可重新说");
         if(remote!=null)sendStart();
-        else if(!bound){bound=context.bindService(new Intent(context,LocalAsrService.class),connection,Context.BIND_AUTO_CREATE | Context.BIND_IMPORTANT);if(!bound)fail(requested,"无法启动本地识别服务");}
+        else if(!bound){bound=context.bindService(new Intent(context,LocalAsrService.class),connection,Context.BIND_AUTO_CREATE);if(!bound)fail(requested,"无法启动本地识别服务");}
     }
     private void sendStart(){
         if(requestSent||!valid)return;
@@ -75,8 +81,9 @@ public final class OfflineSpeechRecognizer implements SafeAudioRecorder.Listener
         main.postDelayed(resultTimeout,RESULT_TIMEOUT_MS);
         transact(LocalAsrService.FINISH,g,null);
     }
-    public void cancel(){long g=generation;valid=false;finishing=false;finishSent=false;clearTimeouts();recorder.stop();if(requestSent)transact(LocalAsrService.CANCEL,g,null);requestSent=false;main.removeCallbacks(idleRelease);main.postDelayed(idleRelease,60000);}
-    public void close(){closed=true;cancel();main.removeCallbacks(idleRelease);unbind();listener=null;}
+    public void cancel(){long g=generation;valid=false;finishing=false;finishSent=false;clearTimeouts();recorder.stop();if(requestSent)transact(LocalAsrService.CANCEL,g,null);requestSent=false;main.removeCallbacks(idleRelease);main.postDelayed(idleRelease,IDLE_MODEL_KEEPALIVE_MS);}
+    public void releaseIdleNow(){if(valid)return;main.removeCallbacks(idleRelease);idleRelease.run();}
+    public void close(){closed=true;cancel();main.removeCallbacks(idleRelease);idleRelease.run();listener=null;}
     private void unbind(){if(bound){try{context.unbindService(connection);}catch(IllegalArgumentException ignored){}bound=false;}remote=null;requestSent=false;}
     private void event(long g,String kind,String text){
         if(!valid||g!=generation||listener==null)return;
@@ -92,7 +99,7 @@ public final class OfflineSpeechRecognizer implements SafeAudioRecorder.Listener
             // requestSent=true made the next tap send a stale CANCEL directly
             // before its new START, which could cancel the replacement session.
             requestSent=false;
-            recorder.stop();listener.onResult(g,text==null?"":text);main.postDelayed(idleRelease,60000);
+            recorder.stop();listener.onResult(g,text==null?"":text);main.postDelayed(idleRelease,IDLE_MODEL_KEEPALIVE_MS);
         }
         else if("error".equals(kind))fail(g,text==null?"本地识别失败":text);
     }

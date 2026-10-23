@@ -250,6 +250,10 @@ public class UniversalInputMethodService extends InputMethodService
 
     @Override public View onCreateInputView() {
         syncVoiceDraft();
+        // Android may ask one InputMethodService instance to recreate its view.
+        // Never retain children owned by the previous hierarchy.
+        if(micIcon!=null)micIcon.stopRingAnimation();
+        radialMenuItems.clear();
         LinearLayout root = column();normalRoot=root;
         dockRoot=new FrameLayout(this);dockRoot.setBackgroundColor(Color.TRANSPARENT);
         root.setPadding(dp(2), dp(2), dp(2), dp(3));
@@ -357,6 +361,12 @@ public class UniversalInputMethodService extends InputMethodService
         dockDelete=compactControl("backspace","删除",v -> backspace());bindDelete(dockDelete);
         micIcon=new MicView();
         micIcon.setOnClickListener(v -> {if(compactMenu())panels.returnPrimary(session.generation());toggleVoice();});
+        // Keep a semantic long-click path for accessibility services and tests;
+        // touch users still use the gesture handler below.
+        micIcon.setOnLongClickListener(v -> {
+            if(sensitiveField)return false;
+            openCompactMore();return true;
+        });
         micIcon.setOnTouchListener((v,event) -> handleDockTouch(event));
         floatingDock.addView(micIcon,new LinearLayout.LayoutParams(dp(48),dp(48)));
         radialMenu=new FrameLayout(this);radialMenu.setClipChildren(false);radialMenu.setClipToPadding(false);
@@ -838,6 +848,10 @@ public class UniversalInputMethodService extends InputMethodService
         cancelDockGesture();main.removeCallbacks(contextProbe);destroyed=true;if(contextExecutor!=null)contextExecutor.shutdownNow();stopDeleteRepeat(); persistRemoteState(true); session.invalidate();
         if (speech != null) speech.close(); if (remoteSender != null) remoteSender.close();
         if (history != null) history.close(); if (keyboard != null) keyboard.close(); super.onDestroy();
+    }
+    @Override public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        if(speech!=null && level>=android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW)speech.releaseIdleNow();
     }
 
     private void rebuildKeys() {
@@ -1325,7 +1339,7 @@ public class UniversalInputMethodService extends InputMethodService
             message="请先点击要输入文字的位置";render();return;
         }
         if(session.state()==InputSession.State.PREVIEW && !session.preview().isEmpty()) {
-            message="还有未写入文字，请打开功能重试或取消";render();return;
+            message="还有未写入文字（"+codePointCount(session.preview())+"字），请上屏或取消";render();return;
         }
         if(session.state()==InputSession.State.LISTENING) {speech.finish();message="识别中";render();return;}
         if(session.state()==InputSession.State.RECOGNIZING) {interruptRecognitionForModeSwitch();message="已停止";render();return;}

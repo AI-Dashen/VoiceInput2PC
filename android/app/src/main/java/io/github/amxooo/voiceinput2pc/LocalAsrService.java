@@ -15,13 +15,16 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Locale;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** Own-UID bound process. The APK-owned C++ engine has no shell, network or Termux dependency. */
 public final class LocalAsrService extends Service {
     static final String TOKEN="io.github.amxooo.voiceinput2pc.LOCAL_ASR";
-    static final int START=1, FEED=2, FINISH=3, CANCEL=4, EVENT=5, RESET_PROCESS=6, FILE_TRANSCRIBE=7;
+    static final int START=1, FEED=2, FINISH=3, CANCEL=4, EVENT=5, RESET_PROCESS=6, FILE_TRANSCRIBE=7, RELEASE_IDLE=8;
+    private static final long IDLE_RELEASE_FALLBACK_MS=75000;
     private static final int MAX_PCM_BYTES=16000*2*180;
     private static final String[] ASSET_NAMES={"decoder-runtime.bin","encoder.mnn.weight","encoder_stream.mnn","logit.mnn","logit.mnn.weight","vocab.txt"};
     private static final long[] ASSET_BYTES={13865684L,119098728L,248008L,1752L,25088022L,935789L};
@@ -33,7 +36,7 @@ public final class LocalAsrService extends Service {
         "5ff111e9d03bcc1836d4cfa5caed7c114d29e2a6909d6aba704d9ae1b5c0ec4e",
         "d90571b868b4285bf22eafeac862f8b5e8cba7639c06192598e8c4b250d00027"};
     private static final String ASSET_SET_ID="independent-asr-v1-94e09dab-5f4f60a5";
-    private final ExecutorService worker=Executors.newSingleThreadExecutor();
+    private final ScheduledExecutorService worker=Executors.newSingleThreadScheduledExecutor();
     // These fields are owned by worker. Binder threads only validate and enqueue
     // commands, so an old generation cannot change a newer session's state.
     private boolean cancelled;
@@ -42,9 +45,13 @@ public final class LocalAsrService extends Service {
     private volatile long activeGeneration,requestedGeneration;
     // File requests never borrow the live microphone generation/callback.
     private long batchGeneration;
+    private final AtomicInteger pendingBatchRequests=new AtomicInteger();
     private volatile long pendingInteractiveGeneration;
     private volatile IBinder callback;
     private boolean prepared;
+    private long idleEpoch;
+    private volatile boolean clientBound;
+    private volatile boolean destroying;
     private final Binder binder=new Binder(){
         @Override protected boolean onTransact(int code,Parcel data,Parcel reply,int flags)throws RemoteException{
             if(code==INTERFACE_TRANSACTION){if(reply!=null)reply.writeString(TOKEN);return true;}
@@ -58,8 +65,9 @@ public final class LocalAsrService extends Service {
             else if(code==FILE_TRANSCRIBE){
                 IBinder target=data.readStrongBinder();String path=data.readString();long start=data.readLong(),end=data.readLong();
                 if(target==null||path==null||start<0||end<=start||end-start>16000L*30)throw new IllegalArgumentException("Invalid recording segment");
-                worker.execute(()->transcribeFile(generation,target,path,start,end));
+                pendingBatchRequests.incrementAndGet();worker.execute(()->transcribeFile(generation,target,path,start,end));
             }
+            else if(code==RELEASE_IDLE)worker.execute(()->releaseIdle(false));
             else if(code==RESET_PROCESS){
                 // This service always runs in the dedicated :local_asr process.
                 // RESET_PROCESS is the last-resort escape hatch when native
@@ -71,8 +79,9 @@ public final class LocalAsrService extends Service {
             if(reply!=null)reply.writeNoException();return true;
         }
     };
-    @Override public IBinder onBind(Intent intent){return binder;}
-    private void requestStart(long generation,IBinder target){if(pendingInteractiveGeneration==generation)pendingInteractiveGeneration=0;requestedGeneration=generation;start(generation,target);}
+    @Override public IBinder onBind(Intent intent){clientBound=true;return binder;}
+    @Override public boolean onUnbind(Intent intent){clientBound=false;worker.execute(()->releaseIdle(true));return false;}
+    private void requestStart(long generation,IBinder target){cancelIdleRelease();if(pendingInteractiveGeneration==generation)pendingInteractiveGeneration=0;requestedGeneration=generation;start(generation,target);}
     private void start(long generation,IBinder target){
         close(activeGeneration);if(requestedGeneration!=generation)return;activeGeneration=generation;callback=target;cancelled=false;synchronized(pcmLock){pcm.reset();}
         try{
@@ -110,17 +119,32 @@ public final class LocalAsrService extends Service {
         if(text==null||text.trim().isEmpty()){
             String detail="本地识别失败："+IndependentAsrNative.lastError();
             emit(generation,"error",detail);close(generation);invalidateEngine();
-        }else {emit(generation,"final",text);close(generation);}
+        }else {emit(generation,"final",text);close(generation);scheduleIdleRelease();}
     }
-    private void cancel(long generation){if(generation==requestedGeneration)requestedGeneration=0;if(generation!=activeGeneration)return;cancelled=true;close(generation);}
+    private void cancel(long generation){if(generation==requestedGeneration)requestedGeneration=0;if(generation!=activeGeneration){scheduleIdleRelease();return;}cancelled=true;close(generation);scheduleIdleRelease();}
     private void close(long generation){if(generation!=activeGeneration)return;if(prepared)IndependentAsrNative.cancelStream();activeGeneration=0;if(requestedGeneration==generation)requestedGeneration=0;callback=null;synchronized(pcmLock){pcm.reset();}}
     private void invalidateEngine(){
         if(prepared)IndependentAsrNative.release();
         prepared=false;
     }
+    private boolean idle(){return activeGeneration==0&&requestedGeneration==0&&pendingInteractiveGeneration==0&&batchGeneration==0&&pendingBatchRequests.get()==0;}
+    private void cancelIdleRelease(){idleEpoch++;}
+    private void scheduleIdleRelease(){
+        if(!idle()||destroying)return;
+        final long expected=++idleEpoch;
+        worker.schedule(()->{if(expected==idleEpoch)releaseIdle(false);},IDLE_RELEASE_FALLBACK_MS,TimeUnit.MILLISECONDS);
+    }
+    private void releaseIdle(boolean exitWhenUnbound){
+        if(!idle()||destroying)return;
+        cancelIdleRelease();invalidateEngine();
+        // MNN/native allocators may retain arenas after deleting the engine.
+        // This process contains ASR only, so exiting it is the reliable model eviction boundary.
+        if(exitWhenUnbound&&!clientBound)android.os.Process.killProcess(android.os.Process.myPid());
+    }
     private void emit(long generation,String kind,String text){IBinder target=callback;if(target==null||generation!=activeGeneration||cancelled)return;Parcel p=Parcel.obtain();try{p.writeInterfaceToken(TOKEN);p.writeLong(generation);p.writeString(kind);p.writeString(text);target.transact(EVENT,p,null,IBinder.FLAG_ONEWAY);}catch(RemoteException ignored){cancelled=true;}finally{p.recycle();}}
     private void transcribeFile(long generation,IBinder target,String path,long first,long end){
         try{
+            cancelIdleRelease();
             if(activeGeneration!=0||requestedGeneration!=0||pendingInteractiveGeneration!=0)throw new IOException("LIVE_ASR_BUSY");
             File file=new File(path).getCanonicalFile();
             File recordings=new File(getFilesDir(),"recordings").getCanonicalFile();
@@ -137,7 +161,7 @@ public final class LocalAsrService extends Service {
             if(result==null)throw new IOException("Local recording recognition failed: "+IndependentAsrNative.lastError());
             emitBatch(target,generation,"batch_final",result);
         }catch(Throwable error){emitBatch(target,generation,"batch_error",error.getMessage()==null?error.getClass().getSimpleName():error.getMessage());}
-        finally{if(batchGeneration==generation)batchGeneration=0;}
+        finally{if(batchGeneration==generation)batchGeneration=0;pendingBatchRequests.decrementAndGet();scheduleIdleRelease();}
     }
     private void emitBatch(IBinder target,long generation,String kind,String text){
         Parcel packet=Parcel.obtain();try{packet.writeInterfaceToken(TOKEN);packet.writeLong(generation);packet.writeString(kind);packet.writeString(text);target.transact(EVENT,packet,null,IBinder.FLAG_ONEWAY);}catch(RemoteException ignored){}finally{packet.recycle();}
@@ -159,5 +183,18 @@ public final class LocalAsrService extends Service {
     private static String readSmall(File file)throws IOException{byte[] data=new byte[(int)Math.min(file.length(),256)];try(FileInputStream in=new FileInputStream(file)){int n=in.read(data);return n<0?"":new String(data,0,n,StandardCharsets.UTF_8);}}
     private static String sha256(File file)throws Exception{MessageDigest d=MessageDigest.getInstance("SHA-256");try(InputStream in=new FileInputStream(file)){byte[] b=new byte[262144];int n;while((n=in.read(b))!=-1)d.update(b,0,n);}return hex(d.digest());}
     private static String hex(byte[] value){StringBuilder out=new StringBuilder();for(byte b:value)out.append(String.format(Locale.ROOT,"%02x",b&255));return out.toString();}
-    @Override public void onDestroy(){worker.execute(()->{cancelled=true;if(activeGeneration!=0)close(activeGeneration);if(prepared)IndependentAsrNative.release();});worker.shutdown();super.onDestroy();}
+    @Override public void onTrimMemory(int level){
+        super.onTrimMemory(level);
+        if(level>=TRIM_MEMORY_RUNNING_LOW)worker.execute(()->releaseIdle(false));
+    }
+    @Override public void onLowMemory(){super.onLowMemory();worker.execute(()->releaseIdle(false));}
+    @Override public void onDestroy(){
+        destroying=true;
+        worker.execute(()->{
+            cancelled=true;if(activeGeneration!=0)close(activeGeneration);invalidateEngine();
+            // A cached :local_asr process otherwise keeps ~1.2 GiB of native arenas/zRAM.
+            android.os.Process.killProcess(android.os.Process.myPid());
+        });
+        worker.shutdown();super.onDestroy();
+    }
 }

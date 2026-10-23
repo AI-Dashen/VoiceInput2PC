@@ -139,6 +139,7 @@ public final class CompactUiRenderTest extends InstrumentationTestCase {
             assertEquals(View.GONE,((View)get(s,"dockAction")).getVisibility());
             assertIcon(s.root,"键盘","keyboard");assertHub(s);capture(s,"menu");capture(s,"expanded");
             described(s.root,"键盘").performClick();capture(s,"keyboard");
+            call(s,"switchMode",new Class[]{KeyboardController.Mode.class},KeyboardController.Mode.PINYIN);
             int idle=((View)get(s,"normalRoot")).getHeight();
             assertEquals(View.INVISIBLE,((View)get(s,"composition")).getVisibility());
             assertEquals(View.INVISIBLE,((View)get(s,"candidateScroller")).getVisibility());
@@ -156,6 +157,7 @@ public final class CompactUiRenderTest extends InstrumentationTestCase {
     }
     public void testLongPinyinPreeditStaysInsideItsSingleLineViewport()throws Throwable {
         ui(()->{Ime s=fixture();
+            call(s,"switchMode",new Class[]{KeyboardController.Mode.class},KeyboardController.Mode.PINYIN);
             String longPinyin="zhonghuarenmingongheguowansuinimenhaoshijie";
             for(int i=0;i<longPinyin.length();i++)
                 call(s,"type",new Class[]{String.class},String.valueOf(longPinyin.charAt(i)));
@@ -359,6 +361,7 @@ public final class CompactUiRenderTest extends InstrumentationTestCase {
     public void testCandidateViewReuseOnTyping()throws Throwable {
         ui(()->{
             Ime s=fixture();keyboard(s);
+            call(s,"switchMode",new Class[]{KeyboardController.Mode.class},KeyboardController.Mode.PINYIN);
             ViewGroup candidateContainer=(ViewGroup)get(s,"candidates");
 
             // Type "ni" to trigger first candidate render

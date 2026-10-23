@@ -95,19 +95,24 @@ public final class RecordingTranscriptionService extends JobService {
                 if(segments.length()==0)throw new IOException("未检测到可分辨的人声，录音保留");
                 store.update(audio,j->{j.put("segments",segments);j.put("speakers",speakers);j.put("total_segments",segments.length());j.put("completed_segments",0);j.put("speaker_method","sherpa-onnx-1.13.8-pyannote-int8-campplus");});
             }
-            JSONArray segments=store.load(audio).getJSONArray("segments");RecordingAsrClient client=new RecordingAsrClient(this);
-            for(int index=0;index<segments.length();index++){
+            JSONArray segments=store.load(audio).getJSONArray("segments");
+            try(RecordingAsrClient client=new RecordingAsrClient(this)){for(int index=0;index<segments.length();index++){
                 check(cancelled);JSONObject segment=store.load(audio).getJSONArray("segments").getJSONObject(index);
                 if("COMPLETED".equals(segment.optString("status")))continue;
-                state(store,audio,"TRANSCRIBING","");String text=null;
+                state(store,audio,"TRANSCRIBING","");String text=null;int reconnects=0;
                 while(text==null){
                     check(cancelled);
                     try{text=client.transcribe(pcm,segment.getLong("start_ms")*16,segment.getLong("end_ms")*16,cancelled);}
-                    catch(Exception e){if(e.getMessage()!=null&&e.getMessage().contains("LIVE_ASR_BUSY")){state(store,audio,"WAITING_INPUT","正在使用语音输入，转写稍后继续");Thread.sleep(1500);continue;}throw e;}
+                    catch(Exception e){
+                        String detail=e.getMessage()==null?"":e.getMessage();
+                        if(detail.contains("LIVE_ASR_BUSY")){state(store,audio,"WAITING_INPUT","正在使用语音输入，转写稍后继续");Thread.sleep(1500);continue;}
+                        if(reconnects++==0&&(detail.contains("ASR connection")||detail.contains("Local ASR"))){Thread.sleep(250);continue;}
+                        throw e;
+                    }
                 }
                 if(text.trim().isEmpty())throw new IOException("片段未识别出文字，已完成部分保留");check(cancelled);final int current=index;final String recognized=text;
                 store.update(audio,j->{if(j.optBoolean("cancel_requested",false))throw new InterruptedException("转写已停止");JSONObject s=j.getJSONArray("segments").getJSONObject(current);s.put("text",recognized);s.put("status","COMPLETED");s.remove("error");int count=0;JSONArray a=j.getJSONArray("segments");for(int k=0;k<a.length();k++)if("COMPLETED".equals(a.getJSONObject(k).optString("status")))count++;j.put("completed_segments",count);j.put("state","TRANSCRIBING");j.put("updated_at",System.currentTimeMillis());});
-            }
+            }}
             check(cancelled);store.update(audio,j->{if(!RecordingWorkPolicy.completed(j.optBoolean("cancel_requested",false),j.optInt("completed_segments"),j.optInt("total_segments")))throw new InterruptedException("转写尚未全部完成或已停止");JSONArray a=j.getJSONArray("segments");for(int i=0;i<a.length();i++)if(!"COMPLETED".equals(a.getJSONObject(i).optString("status")))throw new IOException("存在未完成片段");j.put("state","COMPLETED");j.put("error","");j.put("updated_at",System.currentTimeMillis());});
             // Derived PCM is expendable; original M4A and completed transcript remain durable.
             pcm.delete();

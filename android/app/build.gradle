@@ -25,8 +25,8 @@ android {
         applicationId 'io.github.amxooo.voiceinput2pc'
         minSdk 26
         targetSdk 35
-        versionCode 44
-        versionName '0.8.34-chinese-keyboard-flow'
+        versionCode 46
+        versionName '0.8.36-stable-memory'
         testInstrumentationRunner 'android.test.InstrumentationTestRunner'
     }
     aaptOptions { noCompress "flute", "mnn", "weight", "bin", "txt" }

@@ -44,6 +44,7 @@ public final class ImeEditingRegressionTest extends InstrumentationTestCase {
         TestIme service=new TestIme();
         service.editor=new EditorInfo();service.editor.inputType=1;
         service.editor.packageName="fixture";service.editor.fieldId=1;
+        service.editor.initialSelStart=0;service.editor.initialSelEnd=0;
         Method attach=ContextWrapper.class.getDeclaredMethod("attachBaseContext",Context.class);
         attach.setAccessible(true);attach.invoke(service,context);
         EditText preview=new EditText(context);preview.setText(text);preview.setSelection(preview.length());
@@ -58,8 +59,11 @@ public final class ImeEditingRegressionTest extends InstrumentationTestCase {
         };
         set(service,"keyboard",new KeyboardController(engine));
         InputSession session=(InputSession)field(service,"session");
-        long g=session.begin("fixture","fixture",1,1).generation;
-        session.startListening(g);session.startRecognizing(g);session.showPreview(g,text);
+        long g=session.begin("fixture|1|null|1","fixture",1,1).generation;
+        if(!text.isEmpty()) {
+            session.startListening(g);session.startRecognizing(g);session.showPreview(g,text);
+        }
+        set(service,"editorBound",true);
         set(service,"suspendedPreview",text);
         return service;
     }
