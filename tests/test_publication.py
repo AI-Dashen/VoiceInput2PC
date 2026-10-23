@@ -1,5 +1,6 @@
 import os
 import subprocess
+import shutil
 import unittest
 from pathlib import Path
 
@@ -16,8 +17,8 @@ class PublicIdentityTests(unittest.TestCase):
         desktop = (ROOT / 'receiver_app.py').read_text(encoding='utf-8')
 
         self.assertIn("applicationId 'io.github.amxooo.voiceinput2pc'", build)
-        self.assertIn('versionCode 42', build)
-        self.assertIn("versionName '0.8.32-t9-segment'", build)
+        self.assertIn('versionCode 44', build)
+        self.assertIn("versionName '0.8.34-chinese-keyboard-flow'", build)
         self.assertIn("rootProject.name = 'VoiceInput2PC'", settings)
         self.assertIn('android:label="@string/app_name"', manifest)
         self.assertIn("'app_name', '万能输入法'", build)
@@ -123,6 +124,8 @@ class ReleaseBuildTests(unittest.TestCase):
             self.assertIn(name, build)
 
     def test_build_script_refuses_missing_signing_environment(self):
+        if shutil.which('powershell.exe') is None:
+            self.skipTest('Windows PowerShell is not available in native Termux')
         script = ROOT / 'scripts/build_public_release.ps1'
         environment = os.environ.copy()
         for name in ('VOICEINPUT2PC_KEYSTORE', 'VOICEINPUT2PC_STORE_PASSWORD',

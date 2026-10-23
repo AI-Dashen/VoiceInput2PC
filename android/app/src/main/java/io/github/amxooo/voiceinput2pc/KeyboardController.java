@@ -4,7 +4,6 @@ package io.github.amxooo.voiceinput2pc;
 public final class KeyboardController {
     /** Keep only one short phrase in Rime's ambiguous T9 search window. */
     public static final int T9_NO_MATCH_RECOVERY_CODE_LENGTH = 8;
-    public static final int T9_ROLLOVER_CODE_LENGTH = 16;
     public enum Mode { PINYIN, T9, ENGLISH, NUMBERS, SYMBOLS }
     private final ChineseInputEngine engine;
     private Mode mode = Mode.PINYIN;
@@ -38,14 +37,6 @@ public final class KeyboardController {
         }
         return mode == Mode.ENGLISH && uppercase ? key.toUpperCase(java.util.Locale.ROOT) : key;
     }
-    public boolean t9LimitReached() {
-        return t9LimitReached(null);
-    }
-    public boolean t9LimitReached(ChineseInputEngine.Snapshot current) {
-        if (mode != Mode.T9) return false;
-        ChineseInputEngine.Snapshot state=current == null ? engine.snapshot() : current;
-        return state.numericInput.length() >= T9_ROLLOVER_CODE_LENGTH;
-    }
     /**
      * A long lookup with no real candidate is not useful user text. Recover on
      * the next key instead of leaving an invisible composition that can only be
@@ -69,7 +60,9 @@ public final class KeyboardController {
     /** T9 digits are private lookup codes, never user-visible candidates. */
     public boolean displayableCandidate(String candidate) {
         if (candidate == null || candidate.isEmpty()) return false;
-        return mode != Mode.T9 || !candidate.matches(".*[0-9].*");
+        // Only the decoder's private lookup address is hidden. Real candidates
+        // such as "2号楼" and "3D打印" are valid user text and must remain visible.
+        return mode != Mode.T9 || !candidate.matches("[0-9'\\s]+");
     }
     public int firstCommittableCandidateIndex(ChineseInputEngine.Snapshot state) {
         if (state == null) return -1;

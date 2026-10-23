@@ -845,16 +845,17 @@ public class UniversalInputMethodService extends InputMethodService
         keys.removeAllViews();keyboardActionRail.removeAllViews();
         switch (keyboard.mode()) {
             case T9:
-                addKeyRow(new String[]{"@#","ABC","DEF"},new String[]{"'","2","3"});
+                addKeyRow(new String[]{"分词","ABC","DEF"},new String[]{"'","2","3"});
                 addKeyRow(new String[]{"GHI","JKL","MNO"},new String[]{"4","5","6"});
                 addKeyRow(new String[]{"PQRS","TUV","WXYZ"},new String[]{"7","8","9"});
                 break;
             case NUMBERS:
-                addKeyRow("12345");addKeyRow("67890");
-                addKeyRow(new String[]{".",",","+","-","="},new String[]{".",",","+","-","="});break;
+                addKeyRow("123");addKeyRow("456");addKeyRow("789");
+                addKeyRow(new String[]{".","0","#"},new String[]{".","0","#"});break;
             case SYMBOLS:
-                addKeyRow("，。？！；");addKeyRow("：、（）—");
-                addKeyRow(new String[]{"“","”","《","》","…"},new String[]{"“","”","《","》","…"});break;
+                addKeyRow(new String[]{"@","#","&","%","/"},new String[]{"@","#","&","%","/"});
+                addKeyRow(new String[]{"\\","_","-","+","="},new String[]{"\\","_","-","+","="});
+                addKeyRow(new String[]{"*","￥","$","？","！"},new String[]{"*","￥","$","？","！"});break;
             default:
                 addKeyRow("qwertyuiop");addKeyRow("asdfghjkl");
                 if(keyboard.mode()==KeyboardController.Mode.ENGLISH)
@@ -865,19 +866,34 @@ public class UniversalInputMethodService extends InputMethodService
         LinearLayout bottom=row();
         if(keyboard.mode()==KeyboardController.Mode.T9) {
             symbolModeKey=addButton(bottom,"123",v -> switchMode(KeyboardController.Mode.NUMBERS),1);
-            symbolModeKey.setContentDescription("切换数字键盘");
-            addButton(bottom,"空格",v -> space(),2.5f);
-            pinyinModeKey=addButton(bottom,"中/EN",v -> switchLanguage(),1);t9ModeKey=pinyinModeKey;
+            symbolModeKey.setContentDescription("切换标准数字键盘");
+            addButton(bottom,"空格",v -> space(),2.2f);
+            TextView fullPinyin=addButton(bottom,"26键",v -> switchMode(KeyboardController.Mode.PINYIN),1);
+            fullPinyin.setContentDescription("切换中文26键全拼");
+            pinyinModeKey=addButton(bottom,"EN",v -> switchMode(KeyboardController.Mode.ENGLISH),.8f);
+            t9ModeKey=fullPinyin;
         } else {
             if(keyboard.mode()==KeyboardController.Mode.NUMBERS || keyboard.mode()==KeyboardController.Mode.SYMBOLS) {
-                TextView letters=addButton(bottom,"ABC",v -> switchMode(preferredTextMode),1);
-                letters.setContentDescription("返回九宫格");
+                TextView letters=addButton(bottom,preferredTextMode==KeyboardController.Mode.T9?"九键":"26键",
+                        v -> switchMode(preferredTextMode),1);
+                letters.setContentDescription("返回中文键盘");
             }
             addButton(bottom,"，",v -> type(keyboard.mode()==KeyboardController.Mode.ENGLISH?",":"，"),.7f);
-            addButton(bottom,"空格",v -> space(),2.5f);
+            addButton(bottom,"空格",v -> space(),2.0f);
             addButton(bottom,"。",v -> type(keyboard.mode()==KeyboardController.Mode.ENGLISH?".":"。"),.7f);
-            pinyinModeKey=addButton(bottom,"中/EN",v -> switchLanguage(),1);t9ModeKey=pinyinModeKey;
-            symbolModeKey=addButton(bottom,keyboard.mode()==KeyboardController.Mode.SYMBOLS?"ABC":"123",v -> switchMode(
+            if(keyboard.mode()==KeyboardController.Mode.PINYIN) {
+                t9ModeKey=addButton(bottom,"九键",v -> switchMode(KeyboardController.Mode.T9),.9f);
+                pinyinModeKey=addButton(bottom,"EN",v -> switchMode(KeyboardController.Mode.ENGLISH),.8f);
+            } else if(keyboard.mode()==KeyboardController.Mode.ENGLISH) {
+                t9ModeKey=addButton(bottom,"九键",v -> switchMode(KeyboardController.Mode.T9),.9f);
+                pinyinModeKey=addButton(bottom,"中文",v -> switchMode(preferredTextMode),.9f);
+            } else {
+                pinyinModeKey=addButton(bottom,"中/EN",v -> switchLanguage(),1);
+                t9ModeKey=pinyinModeKey;
+            }
+            String modeLabel=keyboard.mode()==KeyboardController.Mode.NUMBERS?"符号":
+                    keyboard.mode()==KeyboardController.Mode.SYMBOLS?"ABC":"123";
+            symbolModeKey=addButton(bottom,modeLabel,v -> switchMode(
                     keyboard.mode()==KeyboardController.Mode.NUMBERS?KeyboardController.Mode.SYMBOLS:
                     keyboard.mode()==KeyboardController.Mode.SYMBOLS?preferredTextMode:KeyboardController.Mode.NUMBERS),1);
             symbolModeKey.setOnLongClickListener(v -> {switchMode(preferredTextMode);return true;});
@@ -951,8 +967,8 @@ public class UniversalInputMethodService extends InputMethodService
         if (sensitiveField && (mode == KeyboardController.Mode.PINYIN || mode == KeyboardController.Mode.T9)) return;
         if (busy()) interruptRecognitionForModeSwitch();
         if (session.state() == InputSession.State.PREVIEW) syncVoiceDraft();
-        voiceMode=false;
-        settleKeyboardComposition(); keyboard.setMode(mode);
+        if (!settleKeyboardComposition()) return;
+        voiceMode=false; keyboard.setMode(mode);
         if (mode == KeyboardController.Mode.PINYIN || mode == KeyboardController.Mode.T9) preferredTextMode=mode;
         message=""; rebuildKeys(); render();
     }
@@ -973,66 +989,14 @@ public class UniversalInputMethodService extends InputMethodService
                 ? preferredTextMode : KeyboardController.Mode.ENGLISH);
     }
     private void type(String value) {
-        if (!panels.isPrimary()) return;
-        if (busy()) return;
+        if (!panels.isPrimary() || busy()) return;
         if (" ".equals(value)) { space(); return; }
         if ("SHIFT".equals(value)) { keyboard.toggleCase(); rebuildKeys(); return; }
-        ChineseInputEngine.Snapshot stateBeforeKey=null;
-        if (keyboard.isT9ComposingKey(value)) {
-            stateBeforeKey=keyboard.snapshot();
-        }
-        if (stateBeforeKey != null && keyboard.t9LimitReached(stateBeforeKey)) {
-            if(!rolloverT9(stateBeforeKey))return;
-            // A rejected host commit retains a recovery draft; do not mix a new
-            // numeric composition into that pending transaction.
-            if(session.state()==InputSession.State.PREVIEW)return;
-            stateBeforeKey=null;
-        }
+        ChineseInputEngine.Snapshot stateBeforeKey=keyboard.isT9ComposingKey(value)
+                ? keyboard.snapshot() : null;
         String literal = keyboard.type(value,stateBeforeKey);
         if (literal != null) commitLiteral(literal); else syncComposition();
     }
-    /**
-     * Bounds Rime's ambiguous active window without discarding keystrokes.
-     * If the complete window has no candidate, shorten it until the nearest
-     * valid prefix can be committed, then replay the untouched tail as a new
-     * lookup segment. The pending physical key is handled by the caller.
-     */
-    private boolean rolloverT9(ChineseInputEngine.Snapshot initial) {
-        if(initial == null || keyboard.mode()!=KeyboardController.Mode.T9)return true;
-        String original=initial.numericInput;
-        StringBuilder tail=new StringBuilder();
-        ChineseInputEngine.Snapshot prefix=initial;
-        int candidate=keyboard.firstCommittableCandidateIndex(prefix);
-        while(candidate<0 && !prefix.numericInput.isEmpty()) {
-            String code=prefix.numericInput;
-            tail.insert(0,code.charAt(code.length()-1));
-            keyboard.backspace();
-            prefix=keyboard.snapshot();
-            candidate=keyboard.firstCommittableCandidateIndex(prefix);
-        }
-        if(candidate<0) {
-            // The decoder could not recover even a one-key prefix. Restore the
-            // bounded original state and reject only the new pending key.
-            keyboard.reset();
-            ChineseInputEngine.Snapshot state=keyboard.snapshot();
-            for(int i=0;i<original.length();i++) {
-                keyboard.type(String.valueOf(original.charAt(i)),state);
-                state=keyboard.snapshot();
-            }
-            message="当前组合未匹配，请删除一位后继续";
-            render(state);return false;
-        }
-        selectCandidate(candidate);
-        if(session.state()==InputSession.State.PREVIEW)return false;
-        ChineseInputEngine.Snapshot state=keyboard.snapshot();
-        for(int i=0;i<tail.length();i++) {
-            keyboard.type(String.valueOf(tail.charAt(i)),state);
-            state=keyboard.snapshot();
-        }
-        message=tail.length()==0 ? "长句已自动分段" : "长句已分段，未匹配部分已保留";
-        return true;
-    }
-
     private boolean rawEditor() {
         EditorInfo info=getCurrentInputEditorInfo();
         return info != null && EditorCompatibility.rawEditor(info.inputType,info.packageName);
@@ -1176,32 +1140,24 @@ public class UniversalInputMethodService extends InputMethodService
     }
     private void selectCandidate(int index) {
         if (!panels.isPrimary() || busy()) return;
-        String result=keyboard.select(index);
-        if (result != null && !result.isEmpty()) {
-            if (session.state() == InputSession.State.PREVIEW) editPreview(result,false);
-            else routeStable(result);
-        }
-        syncComposition();
+        if(commitCandidate(index)) syncComposition();
     }
-    /** Switching input mode keeps what the user typed, even if no Chinese candidate is available. */
-    private void settleKeyboardComposition() {
-        ChineseInputEngine.Snapshot state=keyboard.snapshot();
-        if(state.rawInput.isEmpty())return;
-        int candidate=keyboard.firstCommittableCandidateIndex(state);
-        String text=candidate < 0 ? null : keyboard.select(candidate);
-        // Full Pinyin deliberately allows a mode switch to commit Latin spelling.
-        // T9 digits are only a decoder address and must never escape.
-        if((text==null || text.isEmpty()) && keyboard.mode()!=KeyboardController.Mode.T9)text=state.rawInput;
-        if(text==null || text.isEmpty()) {
-            keyboard.reset();targets.clearComposing();
-            InputConnection c=getCurrentInputConnection();
-            if(!targets.isRemote() && c!=null)c.finishComposingText();
-            activeComposing="";return;
+    private boolean commitCandidate(int index) {
+        String result=keyboard.select(index);
+        if(result==null || result.isEmpty()) {
+            message="候选未能确认，原输入已保留";render();return false;
         }
-        routeStable(text,"ime_pinyin");
-        keyboard.reset();targets.clearComposing();
-        InputConnection c=getCurrentInputConnection();if(!targets.isRemote() && c!=null)c.finishComposingText();
-        activeComposing="";
+        boolean accepted;
+        if(session.state()==InputSession.State.PREVIEW) {editPreview(result,false);accepted=true;}
+        else accepted=routeStable(result);
+        return accepted;
+    }
+    /** Mode changes never decide or discard an unfinished composition. */
+    private boolean settleKeyboardComposition() {
+        ChineseInputEngine.Snapshot state=keyboard.snapshot();
+        if(state.rawInput.isEmpty())return true;
+        message="请先选词或删除当前输入";
+        syncComposition();return false;
     }
     private void clearComposition() {
         if (keyboard != null) keyboard.reset();
@@ -1215,7 +1171,11 @@ public class UniversalInputMethodService extends InputMethodService
     private void commitLiteral(String value) {
         if (!panels.isPrimary() || busy()) return;
         ChineseInputEngine.Snapshot state=keyboard.snapshot();
-        if (keyboard.chinese() && !state.rawInput.isEmpty()) { message="请先选词或删除拼音"; render(); return; }
+        if(keyboard.chinese() && !state.rawInput.isEmpty()) {
+            int candidate=keyboard.firstCommittableCandidateIndex(state);
+            if(candidate<0) {message="当前组合没有候选，请继续输入或删除";render();return;}
+            if(!commitCandidate(candidate))return;
+        }
         if (session.state() == InputSession.State.PREVIEW) { editPreview(value,false); render(); return; }
         routeStable(value);
     }
@@ -1236,15 +1196,20 @@ public class UniversalInputMethodService extends InputMethodService
     }
     private void backspace() {
         if (!panels.isPrimary() || busy()) return;
+        // Deleting an unfinished decoder composition is local to the IME and must
+        // remain available even while the host editor readiness probe is stale.
+        if (!keyboard.snapshot().rawInput.isEmpty()) {
+            keyboard.backspace();
+            if(session.state()==InputSession.State.PREVIEW)render(); else syncComposition();
+            return;
+        }
         if(!targets.isRemote() && editorReadiness()!=EditorReadinessPolicy.State.READY) {
             message="请先点击要编辑的输入框";render();return;
         }
         if (session.state() == InputSession.State.PREVIEW) {
-            if (!keyboard.snapshot().rawInput.isEmpty()) { keyboard.backspace(); render(); }
-            else editPreview("",true);
+            editPreview("",true);
             return;
         }
-        if (!keyboard.snapshot().rawInput.isEmpty()) { keyboard.backspace(); syncComposition(); return; }
         if (targets.isRemote()) {
             targets.deleteBackward(); persistRemoteState(false); message=""; render(); return;
         }
@@ -1291,9 +1256,7 @@ public class UniversalInputMethodService extends InputMethodService
             if(keyboard.mode()==KeyboardController.Mode.T9) {
                 int candidate=keyboard.firstCommittableCandidateIndex(keyboardState);
                 if(candidate>=0)selectCandidate(candidate);
-                else {
-                    clearComposition();message="未匹配到汉字，请重新输入";render();
-                }
+                else {message="当前组合没有候选，请继续输入或删除";render();}
                 return;
             }
             // Conventional Chinese IME contract: Space chooses the first Chinese
@@ -1353,7 +1316,8 @@ public class UniversalInputMethodService extends InputMethodService
         stopDeleteRepeat();
         if(sensitiveField)return;
         if(busy())interruptRecognitionForModeSwitch();
-        settleKeyboardComposition();voiceMode=true;message="";render();
+        if(!settleKeyboardComposition())return;
+        voiceMode=true;message="";render();
     }
     private void toggleVoice() {
         if(!panels.isPrimary() || sensitiveField)return;
@@ -1365,7 +1329,8 @@ public class UniversalInputMethodService extends InputMethodService
         }
         if(session.state()==InputSession.State.LISTENING) {speech.finish();message="识别中";render();return;}
         if(session.state()==InputSession.State.RECOGNIZING) {interruptRecognitionForModeSwitch();message="已停止";render();return;}
-        settleKeyboardComposition();voiceMode=true;
+        if(!settleKeyboardComposition())return;
+        voiceMode=true;
         if(session.state()==InputSession.State.PREVIEW){message="请先处理未写入文字";render();return;}
         InputSession.Identity current=session.identity();
         long generation=session.begin(current.targetId,current.packageName,current.fieldId,current.inputType).generation;
@@ -1523,7 +1488,7 @@ public class UniversalInputMethodService extends InputMethodService
     private void toggleOutputTarget() {
         if(sensitiveField)return;
         if(busy())interruptRecognitionForModeSwitch();
-        settleKeyboardComposition();
+        if(!settleKeyboardComposition())return;
         if(panels.isPrimary())panels.enterSecondary(session.generation(),keyboard.mode(),"",lastSelectionStart,lastSelectionEnd);
         panels.openFeature(ImePanelController.Feature.TRANSFER);render();
     }
@@ -2118,7 +2083,13 @@ public class UniversalInputMethodService extends InputMethodService
         symbolModeKey.setText(keyboard.mode()==KeyboardController.Mode.SYMBOLS ? "ABC" : keyboard.mode()==KeyboardController.Mode.NUMBERS ? "符号" : "123");
         if(symbolModeKey instanceof ImeIconButton) ((ImeIconButton)symbolModeKey).setIcon(
                 keyboard.mode()==KeyboardController.Mode.SYMBOLS?"keyboard":keyboard.mode()==KeyboardController.Mode.NUMBERS?"symbols":"numbers");
-        pinyinModeKey.setText(keyboard.mode()==KeyboardController.Mode.ENGLISH ? "EN/中" : "中/EN");
+        if(keyboard.mode()==KeyboardController.Mode.T9 || keyboard.mode()==KeyboardController.Mode.PINYIN)
+            pinyinModeKey.setText("EN");
+        else if(keyboard.mode()==KeyboardController.Mode.ENGLISH)
+            pinyinModeKey.setText("中文");
+        else pinyinModeKey.setText("中/EN");
+        if(t9ModeKey!=null && t9ModeKey!=pinyinModeKey)
+            styleModeKey(t9ModeKey,!voiceSurface && keyboard.mode()==KeyboardController.Mode.T9);
         styleModeKey(symbolModeKey,!voiceSurface && (keyboard.mode() == KeyboardController.Mode.SYMBOLS || keyboard.mode() == KeyboardController.Mode.NUMBERS));
     }
     private String shortDeviceLabel(String value) {

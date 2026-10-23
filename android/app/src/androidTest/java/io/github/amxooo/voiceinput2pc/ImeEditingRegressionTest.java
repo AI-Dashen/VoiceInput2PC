@@ -146,7 +146,7 @@ public final class ImeEditingRegressionTest extends InstrumentationTestCase {
             assertEquals("停止",((TextView)field(service,"enterKey")).getText().toString());
         }catch(Exception e){throw new AssertionError(e);}});
     }
-    public void testT9LookupDigitsNeverEscapeAndMicStartsVoice() throws Throwable {
+    public void testT9ContinuousInputNeverLeaksLookupDigits() throws Throwable {
         runTestOnUiThread(()-> {try {
             TestIme service=(TestIme)fixture("");
             Context context=getInstrumentation().getTargetContext();
@@ -173,47 +173,36 @@ public final class ImeEditingRegressionTest extends InstrumentationTestCase {
             };
             set(service,"keyboard",new KeyboardController(noMatch));
             call(service,"switchMode",new Class[]{KeyboardController.Mode.class},KeyboardController.Mode.T9);
-            for(int i=0;i<40;i++)call(service,"type",new Class[]{String.class},"2");
-            assertTrue("unmatched T9 window must stay bounded: "+raw.length(),
-                    raw.length()<=KeyboardController.T9_ROLLOVER_CODE_LENGTH);
-            assertEquals("",host.getText().toString());
+            for(int i=0;i<40;i++)call(service,"type",new Class[]{String.class},i%2==0?"2":"3");
+            assertEquals("all physical keys reach the decoder",40,raw.length());
+            assertEquals("private T9 digits never enter the host editor","",host.getText().toString());
+            call(service,"backspace",new Class[0]);
+            assertEquals(39,raw.length());
             call(service,"clearComposition",new Class[0]);
             assertEquals(0,raw.length());
 
-            // A long lookup with a valid prefix and an invalid tail must commit
-            // the prefix and replay every tail digit instead of clearing it.
-            final StringBuilder segmented=new StringBuilder();
-            ChineseInputEngine prefixThenTail=new ChineseInputEngine(){
+            // Chinese 26-key is a real Rime composition mode rather than an English alias.
+            final StringBuilder pinyin=new StringBuilder();
+            ChineseInputEngine fullPinyin=new ChineseInputEngine(){
                 public Snapshot snapshot(){
-                    String value=segmented.toString();
-                    java.util.List<String> words=value.isEmpty()||value.length()>10
-                            ? Collections.emptyList():Collections.singletonList("前缀");
-                    return new Snapshot(value,words,0,false,true,"",value,value.length(),0,value.length(),
+                    String value=pinyin.toString();
+                    return new Snapshot(value,value.isEmpty()?Collections.emptyList():Collections.singletonList("你好"),
+                            0,false,true,"",value,value.length(),0,value.length(),
                             Collections.emptyList(),Collections.emptyList(),"",
                             Collections.emptyList(),-1,false,value);
                 }
-                public void input(char c){segmented.append(c);}
-                public void backspace(){if(segmented.length()>0)segmented.setLength(segmented.length()-1);}
-                public String select(int index){if(index!=0||segmented.length()>10)return null;segmented.setLength(0);return "前缀";}
+                public void input(char c){pinyin.append(c);}
+                public void backspace(){if(pinyin.length()>0)pinyin.setLength(pinyin.length()-1);}
+                public String select(int index){if(index!=0)return null;pinyin.setLength(0);return "你好";}
                 public void nextPage(){}public void previousPage(){}
-                public void setLayout(Layout layout){}public void reset(){segmented.setLength(0);}public void close(){}
+                public void setLayout(Layout layout){}public void reset(){pinyin.setLength(0);}public void close(){}
             };
-            set(service,"keyboard",new KeyboardController(prefixThenTail));
-            call(service,"switchMode",new Class[]{KeyboardController.Mode.class},KeyboardController.Mode.T9);
-            for(int i=0;i<KeyboardController.T9_ROLLOVER_CODE_LENGTH+1;i++)
-                call(service,"type",new Class[]{String.class},"2");
-            assertEquals("前缀",host.getText().toString());
-            assertEquals(7,segmented.length());
-            call(service,"clearComposition",new Class[0]);
-
-            set(service,"keyboard",new KeyboardController(noMatch));
-            call(service,"switchMode",new Class[]{KeyboardController.Mode.class},KeyboardController.Mode.T9);
-            for(char key:"999999999999999999999999".toCharArray())
-                call(service,"type",new Class[]{String.class},String.valueOf(key));
-            call(service,"selectVoiceMode",new Class[0]);
-            assertEquals("",host.getText().toString());
-            assertEquals(0,raw.length());
-            assertTrue((Boolean)field(service,"voiceMode"));
+            set(service,"keyboard",new KeyboardController(fullPinyin));
+            call(service,"switchMode",new Class[]{KeyboardController.Mode.class},KeyboardController.Mode.PINYIN);
+            for(char c:"nihao".toCharArray())call(service,"type",new Class[]{String.class},String.valueOf(c));
+            assertEquals("nihao",pinyin.toString());
+            call(service,"space",new Class[0]);
+            assertEquals("你好",host.getText().toString());
         }catch(Exception e){throw new AssertionError(e);}});
     }
     public void testVoiceDraftTypographyAndSegmentCap() throws Throwable {
@@ -566,7 +555,7 @@ public final class ImeEditingRegressionTest extends InstrumentationTestCase {
             assertTrue(engine.snapshot().candidates.contains("你好"));
         } finally {engine.close();}
     }
-    public void testRealPackagedRimeT9LimitAndRapidRecovery() throws Exception {
+    public void testRealPackagedRimeT9ContinuousInputAndRapidRecovery() throws Exception {
         Context original=getInstrumentation().getTargetContext();
         File dir=new File(original.getCacheDir(),"rime-stress-"+UUID.randomUUID());
         assertTrue(dir.mkdirs());
@@ -577,25 +566,23 @@ public final class ImeEditingRegressionTest extends InstrumentationTestCase {
             engine.setLearningEnabled(false);
             KeyboardController controller=new KeyboardController(engine);
             controller.setMode(KeyboardController.Mode.T9);
-            String sequence="6442674654264426";
+            String sequence="64426746542644266442674654264426";
             long started=android.os.SystemClock.elapsedRealtime();
             for(char c:sequence.toCharArray())controller.type(String.valueOf(c));
             long elapsed=android.os.SystemClock.elapsedRealtime()-started;
             assertEquals(sequence,controller.snapshot().numericInput);
-            assertTrue(controller.t9LimitReached());
             controller.backspace();
             assertEquals(sequence.substring(0,sequence.length()-1),controller.snapshot().numericInput);
-            assertFalse(controller.t9LimitReached());
             controller.reset();
             for(char c:"64426".toCharArray())controller.type(String.valueOf(c));
             assertTrue(engine.chooseSyllable("ni"));
             controller.backspace();
             assertEquals("6442",controller.snapshot().numericInput);
-            assertEquals("6442",controller.snapshot().rawInput.replace("'",""));
+            assertEquals("ni42",controller.snapshot().rawInput.replace("'",""));
             controller.reset();
             for(int i=0;i<60;i++){controller.type("6");controller.backspace();}
             assertEquals("",controller.snapshot().numericInput);
-            assertTrue("T9 processing took "+elapsed+"ms",elapsed<15000);
+            assertTrue("continuous T9 processing took "+elapsed+"ms",elapsed<30000);
         }finally{engine.close();}
     }
     public void testRealEditorToSqliteAndReadback() throws Throwable {

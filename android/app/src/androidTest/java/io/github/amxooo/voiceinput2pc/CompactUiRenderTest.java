@@ -232,6 +232,9 @@ public final class CompactUiRenderTest extends InstrumentationTestCase {
             assertEquals(0,s.actions);
         });
     }
+    private String preferredTextModeLabel(Ime service)throws Exception {
+        return get(service,"preferredTextMode")==KeyboardController.Mode.T9?"九键":"26键";
+    }
     public void testMoreWhileListeningPreservesTextWithoutMicrophone()throws Throwable {
         ui(()->{Ime s=fixture();InputSession session=(InputSession)get(s,"session");long old=session.generation();
             assertTrue(session.startListening(old));
@@ -252,10 +255,10 @@ public final class CompactUiRenderTest extends InstrumentationTestCase {
             assertEquals("three T9 rows and one bottom action row",4,rows.getChildCount());
             for(int i=0;i<3;i++)assertEquals(3,((ViewGroup)rows.getChildAt(i)).getChildCount());
             View bottom=rows.getChildAt(3);
-            for(String label:new String[]{"123","空格","中/EN"})assertNotNull("bottom "+label,text(bottom,label));
+            for(String label:new String[]{"123","空格","26键","EN"})assertNotNull("bottom "+label,text(bottom,label));
             assertSame(bottom,((View)get(s,"symbolModeKey")).getParent());
             assertSame(get(s,"keyboardActionRail"),((View)get(s,"enterKey")).getParent());
-            for(String label:new String[]{"@#","ABC","DEF","GHI","JKL","MNO","PQRS","TUV","WXYZ"})
+            for(String label:new String[]{"分词","ABC","DEF","GHI","JKL","MNO","PQRS","TUV","WXYZ"})
                 assertNotNull("T9 key "+label,text(rows,label));
             assertNull("obsolete retry key removed",text((View)get(s,"normalRoot"),"重输"));
             ViewGroup left=(ViewGroup)get(s,"syllables");
@@ -282,7 +285,9 @@ public final class CompactUiRenderTest extends InstrumentationTestCase {
                             View.MeasureSpec.makeMeasureSpec(px(844),View.MeasureSpec.AT_MOST));
                     s.root.layout(0,0,s.root.getMeasuredWidth(),s.root.getMeasuredHeight());
                     ViewGroup rail=(ViewGroup)get(s,"keyboardActionRail"),rows=(ViewGroup)get(s,"keys");
-                    assertEquals(3,rail.getChildCount());assertEquals(4,rows.getChildCount());
+                    assertEquals(3,rail.getChildCount());
+                    int expectedRows=mode==KeyboardController.Mode.NUMBERS?5:4;
+                    assertEquals(expectedRows,rows.getChildCount());
                     assertEquals(px(ImeLayoutSpec.ACTION_RAIL_WIDTH_DP),rail.getWidth());
                     assertTrue("right column follows the keys",rail.getLeft()>=rows.getRight());
                     assertSame(get(s,"deleteKey"),rail.getChildAt(0));
@@ -300,7 +305,15 @@ public final class CompactUiRenderTest extends InstrumentationTestCase {
                             TextView letter=(TextView)top.getChildAt(i);
                             assertTrue("letter fits narrow keyboard: "+letter.getText(),letter.getPaint().measureText(letter.getText().toString())<=letter.getWidth()+1);
                         }
-                    } else assertNotNull("numeric/symbol view has direct return",text(rows,"ABC"));
+                    } else {
+                        assertNotNull("numeric/symbol view has direct Chinese return",
+                                text(rows,preferredTextModeLabel(s)));
+                        if(mode==KeyboardController.Mode.NUMBERS) {
+                            for(int row=0;row<4;row++)assertEquals(3,((ViewGroup)rows.getChildAt(row)).getChildCount());
+                            for(String digit:new String[]{"1","2","3","4","5","6","7","8","9","0"})
+                                assertNotNull("number pad digit "+digit,text(rows,digit));
+                        }
+                    }
                 }
             }
         });
