@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "component": "encoder",
+  "command": [
+    "/data/data/com.termux/files/home/codex-test/analysis/doubao-ime-20261016/independent-runtime/engine-probe-20261018/mnn_stream_encoder_server",
+    "/data/data/com.termux/files/home/codex-test/voiceinput2pc-v08/android/app/src/main/assets/independent-asr/encoder_stream.mnn",
+    "/data/data/com.termux/files/home/codex-test/voiceinput2pc-v08/android/app/src/main/assets/independent-asr/encoder.mnn.weight"
+  ],
+  "pid": 27764,
+  "exit_code": 0,
+  "timing_ms": {
+    "ready": 2296.932,
+    "first_inference": 808.747
+  },
+  "ready_kb": {
+    "t_monotonic": 390884.409652293,
+    "VmHWM": 896916,
+    "VmRSS": 895892,
+    "VmSwap": 0,
+    "Rss": 896496,
+    "Pss": 893282,
+    "Private_Clean": 3436,
+    "Private_Dirty": 889832,
+    "SwapPss": 0
+  },
+  "after_first_inference_kb": {
+    "t_monotonic": 390885.218248074,
+    "VmHWM": 896916,
+    "VmRSS": 896060,
+    "VmSwap": 0,
+    "Rss": 896608,
+    "Pss": 893394,
+    "Private_Clean": 3496,
+    "Private_Dirty": 889884,
+    "SwapPss": 0
+  },
+  "peak_kb": {
+    "VmHWM": 896916,
+    "VmRSS": 896060,
+    "VmSwap": 0,
+    "Rss": 897304,
+    "Pss": 894090,
+    "Private_Clean": 3496,
+    "Private_Dirty": 890640,
+    "SwapPss": 0
+  },
+  "sample_count": 171,
+  "input_bytes": 10240,
+  "output_bytes": 6144,
+  "output_sha256": "f280bd14903522816b2c42fed2ed138e6872aed03564d734e44dbeae6097d83a",
+  "output_preview": null,
+  "stderr": "FLUTE_SHAPE_OK name=Reshape98 out[0]=8,880,1,1/fmt2\nFLUTE_SHAPE_OK name=Reshape102 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\nFLUTE_SHAPE_OK name=Reshape98 out[0]=8,880,1,1/fmt2\nFLUTE_SHAPE_OK name=Reshape102 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\n"
+}

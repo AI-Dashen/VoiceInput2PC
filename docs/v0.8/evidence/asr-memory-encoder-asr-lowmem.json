@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "component": "encoder",
+  "command": [
+    "/data/data/com.termux/files/usr/tmp/asr-memory-probes/mnn_stream_encoder_server_memory_low",
+    "/data/data/com.termux/files/home/codex-test/voiceinput2pc-v08/android/app/src/main/assets/independent-asr/encoder_stream.mnn",
+    "/data/data/com.termux/files/home/codex-test/voiceinput2pc-v08/android/app/src/main/assets/independent-asr/encoder.mnn.weight"
+  ],
+  "pid": 32610,
+  "exit_code": 0,
+  "timing_ms": {
+    "ready": 734.053,
+    "first_inference": 872.943
+  },
+  "ready_kb": {
+    "t_monotonic": 391170.108996871,
+    "VmHWM": 146412,
+    "VmRSS": 146412,
+    "VmSwap": 0,
+    "Rss": 146924,
+    "Pss": 143812,
+    "Private_Clean": 948,
+    "Private_Dirty": 142848,
+    "SwapPss": 0
+  },
+  "after_first_inference_kb": {
+    "t_monotonic": 391170.981920881,
+    "VmHWM": 146668,
+    "VmRSS": 146668,
+    "VmSwap": 0,
+    "Rss": 147048,
+    "Pss": 143936,
+    "Private_Clean": 3528,
+    "Private_Dirty": 140392,
+    "SwapPss": 0
+  },
+  "peak_kb": {
+    "VmHWM": 146668,
+    "VmRSS": 146668,
+    "VmSwap": 0,
+    "Rss": 147048,
+    "Pss": 143936,
+    "Private_Clean": 3528,
+    "Private_Dirty": 142972,
+    "SwapPss": 0
+  },
+  "sample_count": 157,
+  "input_bytes": 10240,
+  "output_bytes": 6144,
+  "output_sha256": "1299148569dfd4d9f2baba9cd865bede55e32936bacd98acb114087b9d5cd02e",
+  "output_preview": null,
+  "stderr": ""
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "component": "encoder",
+  "command": [
+    "/data/data/com.termux/files/usr/tmp/asr-memory-probes/mnn_stream_encoder_server_memory_low",
+    "/data/data/com.termux/files/home/codex-test/voiceinput2pc-v08/android/app/src/main/assets/independent-asr/encoder_stream.mnn",
+    "/data/data/com.termux/files/home/codex-test/voiceinput2pc-v08/android/app/src/main/assets/independent-asr/encoder.mnn.weight"
+  ],
+  "pid": 28597,
+  "exit_code": 0,
+  "timing_ms": {
+    "ready": 1605.262,
+    "first_inference": 1065.37
+  },
+  "ready_kb": {
+    "t_monotonic": 390940.335659667,
+    "VmHWM": 922120,
+    "VmRSS": 900988,
+    "VmSwap": 0,
+    "Rss": 901520,
+    "Pss": 898274,
+    "Private_Clean": 3040,
+    "Private_Dirty": 895216,
+    "SwapPss": 0
+  },
+  "after_first_inference_kb": {
+    "t_monotonic": 390941.400904458,
+    "VmHWM": 922120,
+    "VmRSS": 900988,
+    "VmSwap": 0,
+    "Rss": 901544,
+    "Pss": 898298,
+    "Private_Clean": 3060,
+    "Private_Dirty": 895220,
+    "SwapPss": 0
+  },
+  "peak_kb": {
+    "VmHWM": 922120,
+    "VmRSS": 918280,
+    "VmSwap": 0,
+    "Rss": 919688,
+    "Pss": 916442,
+    "Private_Clean": 3060,
+    "Private_Dirty": 913408,
+    "SwapPss": 0
+  },
+  "sample_count": 153,
+  "input_bytes": 10240,
+  "output_bytes": 6144,
+  "output_sha256": "cfe72294e184cf0cfaac52e4b9c0ad30db39978549df5caf883bd9e118c84c18",
+  "output_preview": null,
+  "stderr": "FLUTE_SHAPE_OK name=Reshape98 out[0]=8,880,1,1/fmt2\nFLUTE_SHAPE_OK name=Reshape102 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\nFLUTE_SHAPE_OK name=Reshape98 out[0]=8,880,1,1/fmt2\nFLUTE_SHAPE_OK name=Reshape102 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\n"
+}

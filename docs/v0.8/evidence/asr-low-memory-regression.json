@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "summary": {
+    "samples": 10,
+    "all_text_equal": true,
+    "all_exit_zero": true,
+    "normal_total_infer_ms": 33567.39,
+    "low_total_infer_ms": 20422.69,
+    "normal_peak_rss_kb": 1140096,
+    "low_peak_rss_kb": 223020
+  },
+  "rows": [
+    {
+      "wav": "BAC009S0764W0121.wav",
+      "normal": {
+        "exit": 0,
+        "text": "甚至出现交易几乎停滞的情况。",
+        "load_ms": 299.683,
+        "infer_ms": 3365.5,
+        "peak_rss_kb": 1139736,
+        "stderr_tail": "t2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\nFLUTE_SHAPE_OK name=Reshape98 out[0]=8,880,1,1/fmt2\nFLUTE_SHAPE_OK name=Reshape102 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\n"
+      },
+      "low": {
+        "exit": 0,
+        "text": "甚至出现交易几乎停滞的情况。",
+        "load_ms": 102.976,
+        "infer_ms": 3238.75,
+        "peak_rss_kb": 222896,
+        "stderr_tail": ""
+      },
+      "text_equal": true
+    },
+    {
+      "wav": "BAC009S0764W0122.wav",
+      "normal": {
+        "exit": 0,
+        "text": "一二线城市虽然也处于调整中。",
+        "load_ms": 300.135,
+        "infer_ms": 3085.55,
+        "peak_rss_kb": 1140028,
+        "stderr_tail": "t2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\nFLUTE_SHAPE_OK name=Reshape98 out[0]=8,880,1,1/fmt2\nFLUTE_SHAPE_OK name=Reshape102 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\n"
+      },
+      "low": {
+        "exit": 0,
+        "text": "一二线城市虽然也处于调整中。",
+        "load_ms": 102.184,
+        "infer_ms": 1795.35,
+        "peak_rss_kb": 223020,
+        "stderr_tail": ""
+      },
+      "text_equal": true
+    },
+    {
+      "wav": "BAC009S0764W0123.wav",
+      "normal": {
+        "exit": 0,
+        "text": "但因为聚集了过多公共资源。",
+        "load_ms": 270.074,
+        "infer_ms": 3109.6,
+        "peak_rss_kb": 1140096,
+        "stderr_tail": "t2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\nFLUTE_SHAPE_OK name=Reshape98 out[0]=8,880,1,1/fmt2\nFLUTE_SHAPE_OK name=Reshape102 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\n"
+      },
+      "low": {
+        "exit": 0,
+        "text": "但因为聚集了过多公共资源。",
+        "load_ms": 90.8433,
+        "infer_ms": 1838.39,
+        "peak_rss_kb": 222616,
+        "stderr_tail": ""
+      },
+      "text_equal": true
+    },
+    {
+      "wav": "BAC009S0764W0124.wav",
+      "normal": {
+        "exit": 0,
+        "text": "为了规避三四线城市明显过剩的市场风险。",
+        "load_ms": 313.626,
+        "infer_ms": 4038.89,
+        "peak_rss_kb": 1139832,
+        "stderr_tail": "t2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\nFLUTE_SHAPE_OK name=Reshape98 out[0]=8,880,1,1/fmt2\nFLUTE_SHAPE_OK name=Reshape102 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\n"
+      },
+      "low": {
+        "exit": 0,
+        "text": "为了规避三四线城市明显过剩的市场风险。",
+        "load_ms": 90.3601,
+        "infer_ms": 2290.92,
+        "peak_rss_kb": 222644,
+        "stderr_tail": ""
+      },
+      "text_equal": true
+    },
+    {
+      "wav": "BAC009S0764W0125.wav",
+      "normal": {
+        "exit": 0,
+        "text": "标杆房起必然调整市场战略。",
+        "load_ms": 312.967,
+        "infer_ms": 3349.11,
+        "peak_rss_kb": 1139664,
+        "stderr_tail": "t2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\nFLUTE_SHAPE_OK name=Reshape98 out[0]=8,880,1,1/fmt2\nFLUTE_SHAPE_OK name=Reshape102 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\n"
+      },
+      "low": {
+        "exit": 0,
+        "text": "标杆房起必然调整市场战略。",
+        "load_ms": 122.749,
+        "infer_ms": 1920.6,
+        "peak_rss_kb": 222820,
+        "stderr_tail": ""
+      },
+      "text_equal": true
+    },
+    {
+      "wav": "BAC009S0764W0126.wav",
+      "normal": {
+        "exit": 0,
+        "text": "因此土地储备至关重要。",
+        "load_ms": 326.195,
+        "infer_ms": 2915.84,
+        "peak_rss_kb": 1139556,
+        "stderr_tail": "t2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\nFLUTE_SHAPE_OK name=Reshape98 out[0]=8,880,1,1/fmt2\nFLUTE_SHAPE_OK name=Reshape102 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\n"
+      },
+      "low": {
+        "exit": 0,
+        "text": "因此土地储备至关重要。",
+        "load_ms": 107.592,
+        "infer_ms": 1599.63,
+        "peak_rss_kb": 222860,
+        "stderr_tail": ""
+      },
+      "text_equal": true
+    },
+    {
+      "wav": "BAC009S0764W0127.wav",
+      "normal": {
+        "exit": 0,
+        "text": "中原地产首席分析师张大伟说。",
+        "load_ms": 365.38,
+        "infer_ms": 3440.73,
+        "peak_rss_kb": 1139812,
+        "stderr_tail": "t2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\nFLUTE_SHAPE_OK name=Reshape98 out[0]=8,880,1,1/fmt2\nFLUTE_SHAPE_OK name=Reshape102 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\n"
+      },
+      "low": {
+        "exit": 0,
+        "text": "中原地产首席分析师张大伟说。",
+        "load_ms": 98.4125,
+        "infer_ms": 1997.45,
+        "peak_rss_kb": 222952,
+        "stderr_tail": ""
+      },
+      "text_equal": true
+    },
+    {
+      "wav": "BAC009S0764W0128.wav",
+      "normal": {
+        "exit": 0,
+        "text": "一线城市土地供应量减少。",
+        "load_ms": 319.12,
+        "infer_ms": 3302.86,
+        "peak_rss_kb": 1139744,
+        "stderr_tail": "t2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\nFLUTE_SHAPE_OK name=Reshape98 out[0]=8,880,1,1/fmt2\nFLUTE_SHAPE_OK name=Reshape102 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\n"
+      },
+      "low": {
+        "exit": 0,
+        "text": "一线城市土地供应量减少。",
+        "load_ms": 84.834,
+        "infer_ms": 1753.83,
+        "peak_rss_kb": 222548,
+        "stderr_tail": ""
+      },
+      "text_equal": true
+    },
+    {
+      "wav": "BAC009S0764W0129.wav",
+      "normal": {
+        "exit": 0,
+        "text": "也助推了土地市场的火爆。",
+        "load_ms": 324.17,
+        "infer_ms": 3150.74,
+        "peak_rss_kb": 1139644,
+        "stderr_tail": "t2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\nFLUTE_SHAPE_OK name=Reshape98 out[0]=8,880,1,1/fmt2\nFLUTE_SHAPE_OK name=Reshape102 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\n"
+      },
+      "low": {
+        "exit": 0,
+        "text": "也助推了土地市场的火爆。",
+        "load_ms": 114.875,
+        "infer_ms": 1778.62,
+        "peak_rss_kb": 222448,
+        "stderr_tail": ""
+      },
+      "text_equal": true
+    },
+    {
+      "wav": "BAC009S0764W0130.wav",
+      "normal": {
+        "exit": 0,
+        "text": "北京锦鑫松住宅土地供应时松。",
+        "load_ms": 312.539,
+        "infer_ms": 3808.57,
+        "peak_rss_kb": 1139444,
+        "stderr_tail": "t2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\nFLUTE_SHAPE_OK name=Reshape98 out[0]=8,880,1,1/fmt2\nFLUTE_SHAPE_OK name=Reshape102 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Padding117 out[0]=1,8,880/fmt2\nFLUTE_SHAPE_OK name=Transpose119 out[0]=1,880,8/fmt2\nFLUTE_SHAPE_OK name=Cast120 out[0]=8,1/fmt0\nFLUTE_SHAPE_OK name=Reshape121 out[0]=1,1,8/fmt0\n"
+      },
+      "low": {
+        "exit": 0,
+        "text": "北京锦鑫松住宅土地供应时松。",
+        "load_ms": 91.6086,
+        "infer_ms": 2209.15,
+        "peak_rss_kb": 222796,
+        "stderr_tail": ""
+      },
+      "text_equal": true
+    }
+  ]
+}

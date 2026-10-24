@@ -4,10 +4,11 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 PROJECT=$(CDPATH= cd -- "$ROOT/.." && pwd)
 RUNTIME="$PROJECT/.runtime"
 MNN="$RUNTIME/MNN-3.6.1"
-MNNLIB="$RUNTIME/mnn-build-3.6.1-clean/OFF"
+MNNLIB="$RUNTIME/mnn-build-3.6.1-asr-lowmem/OFF"
 CPP="$ROOT/android/app/src/main/cpp"
 OUT="$ROOT/android/app/src/main/jniLibs/arm64-v8a"
 BUILD="$ROOT/build/independent-asr-native"
+"$ROOT/scripts/asr/build-mnn-asr-lowmem.sh"
 mkdir -p "$BUILD" "$OUT"
 CC=${CC:-clang}; CXX=${CXX:-clang++}
 COMMON="-O3 -fPIC -ffp-contract=off --target=aarch64-linux-android26 -DANDROID"

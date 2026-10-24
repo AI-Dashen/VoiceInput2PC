@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "component": "logit",
+  "command": [
+    "/data/data/com.termux/files/usr/tmp/asr-memory-probes/mnn_logit_server_memory_low",
+    "/data/data/com.termux/files/home/codex-test/voiceinput2pc-v08/android/app/src/main/assets/independent-asr/logit.mnn",
+    "/data/data/com.termux/files/home/codex-test/voiceinput2pc-v08/android/app/src/main/assets/independent-asr/logit.mnn.weight"
+  ],
+  "pid": 32654,
+  "exit_code": 0,
+  "timing_ms": {
+    "ready": 69.249,
+    "first_inference": 507.097
+  },
+  "ready_kb": {
+    "t_monotonic": 391176.690805202,
+    "VmHWM": 81236,
+    "VmRSS": 32048,
+    "VmSwap": 0,
+    "Rss": 32200,
+    "Pss": 28961,
+    "Private_Clean": 2984,
+    "Private_Dirty": 25960,
+    "SwapPss": 0
+  },
+  "after_first_inference_kb": {
+    "t_monotonic": 391177.197887806,
+    "VmHWM": 81236,
+    "VmRSS": 32944,
+    "VmSwap": 0,
+    "Rss": 33024,
+    "Pss": 29785,
+    "Private_Clean": 3048,
+    "Private_Dirty": 26720,
+    "SwapPss": 0
+  },
+  "peak_kb": {
+    "VmHWM": 81236,
+    "VmRSS": 68948,
+    "VmSwap": 0,
+    "Rss": 70204,
+    "Pss": 66965,
+    "Private_Clean": 3048,
+    "Private_Dirty": 64028,
+    "SwapPss": 0
+  },
+  "sample_count": 94,
+  "input_bytes": 3072,
+  "output_bytes": 28,
+  "output_sha256": "5d03ba8ab0f909f36aaf209515cc26c98af890172da8975893e62468e6a452dd",
+  "output_preview": "RESULT 7289 4.19264 4.71354\n",
+  "stderr": ""
+}
