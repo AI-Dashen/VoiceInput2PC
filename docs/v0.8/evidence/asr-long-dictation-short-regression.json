@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "test": "short-utterance-regression",
+  "samples": 10,
+  "all_equal": true,
+  "all_exit_zero": true,
+  "rows": [
+    {
+      "wav": "BAC009S0764W0121.wav",
+      "baseline": {
+        "exit": 0,
+        "text": "甚至出现交易几乎停滞的情况。",
+        "infer_ms": 1694.36,
+        "stderr": ""
+      },
+      "rolling": {
+        "exit": 0,
+        "text": "甚至出现交易几乎停滞的情况。",
+        "infer_ms": 1789.66,
+        "stderr": ""
+      },
+      "equal": true
+    },
+    {
+      "wav": "BAC009S0764W0122.wav",
+      "baseline": {
+        "exit": 0,
+        "text": "一二线城市虽然也处于调整中。",
+        "infer_ms": 1760.75,
+        "stderr": ""
+      },
+      "rolling": {
+        "exit": 0,
+        "text": "一二线城市虽然也处于调整中。",
+        "infer_ms": 1734.19,
+        "stderr": ""
+      },
+      "equal": true
+    },
+    {
+      "wav": "BAC009S0764W0123.wav",
+      "baseline": {
+        "exit": 0,
+        "text": "但因为聚集了过多公共资源。",
+        "infer_ms": 1682.74,
+        "stderr": ""
+      },
+      "rolling": {
+        "exit": 0,
+        "text": "但因为聚集了过多公共资源。",
+        "infer_ms": 1753.74,
+        "stderr": ""
+      },
+      "equal": true
+    },
+    {
+      "wav": "BAC009S0764W0124.wav",
+      "baseline": {
+        "exit": 0,
+        "text": "为了规避三四线城市明显过剩的市场风险。",
+        "infer_ms": 2070.91,
+        "stderr": ""
+      },
+      "rolling": {
+        "exit": 0,
+        "text": "为了规避三四线城市明显过剩的市场风险。",
+        "infer_ms": 1944.4,
+        "stderr": ""
+      },
+      "equal": true
+    },
+    {
+      "wav": "BAC009S0764W0125.wav",
+      "baseline": {
+        "exit": 0,
+        "text": "标杆房起必然调整市场战略。",
+        "infer_ms": 1477.99,
+        "stderr": ""
+      },
+      "rolling": {
+        "exit": 0,
+        "text": "标杆房起必然调整市场战略。",
+        "infer_ms": 1863.74,
+        "stderr": ""
+      },
+      "equal": true
+    },
+    {
+      "wav": "BAC009S0764W0126.wav",
+      "baseline": {
+        "exit": 0,
+        "text": "因此土地储备至关重要。",
+        "infer_ms": 1564.37,
+        "stderr": ""
+      },
+      "rolling": {
+        "exit": 0,
+        "text": "因此土地储备至关重要。",
+        "infer_ms": 1566.3,
+        "stderr": ""
+      },
+      "equal": true
+    },
+    {
+      "wav": "BAC009S0764W0127.wav",
+      "baseline": {
+        "exit": 0,
+        "text": "中原地产首席分析师张大伟说。",
+        "infer_ms": 1942.47,
+        "stderr": ""
+      },
+      "rolling": {
+        "exit": 0,
+        "text": "中原地产首席分析师张大伟说。",
+        "infer_ms": 1917.62,
+        "stderr": ""
+      },
+      "equal": true
+    },
+    {
+      "wav": "BAC009S0764W0128.wav",
+      "baseline": {
+        "exit": 0,
+        "text": "一线城市土地供应量减少。",
+        "infer_ms": 1787.69,
+        "stderr": ""
+      },
+      "rolling": {
+        "exit": 0,
+        "text": "一线城市土地供应量减少。",
+        "infer_ms": 1475.0,
+        "stderr": ""
+      },
+      "equal": true
+    },
+    {
+      "wav": "BAC009S0764W0129.wav",
+      "baseline": {
+        "exit": 0,
+        "text": "也助推了土地市场的火爆。",
+        "infer_ms": 1654.83,
+        "stderr": ""
+      },
+      "rolling": {
+        "exit": 0,
+        "text": "也助推了土地市场的火爆。",
+        "infer_ms": 1408.7,
+        "stderr": ""
+      },
+      "equal": true
+    },
+    {
+      "wav": "BAC009S0764W0130.wav",
+      "baseline": {
+        "exit": 0,
+        "text": "北京锦鑫松住宅土地供应时松。",
+        "infer_ms": 2123.23,
+        "stderr": ""
+      },
+      "rolling": {
+        "exit": 0,
+        "text": "北京锦鑫松住宅土地供应时松。",
+        "infer_ms": 2117.81,
+        "stderr": ""
+      },
+      "equal": true
+    }
+  ]
+}

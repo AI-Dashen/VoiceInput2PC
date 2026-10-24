@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-24",
+  "fixture": {
+    "path": "/data/data/com.termux/files/usr/tmp/asr-memory-probes/asr-test-45s.wav",
+    "duration_seconds": 47.091,
+    "bytes": 1506956,
+    "sha256": "bea4e20db14c59a6796ef9fd7bd97a60140e91061ed97f2b46cfed06d29563f2",
+    "construction": "11 repeats of packaged public asr-test.wav"
+  },
+  "baseline": {
+    "name": "v0.8.37 engine before rolling segmentation",
+    "exit_code": 3,
+    "wall_ms": 13354.0,
+    "reported_infer_ms": null,
+    "text": "",
+    "stderr": "DECODER_APPEND_RANGE"
+  },
+  "fixed": {
+    "name": "v0.8.38 streaming API, 2048 samples/feed",
+    "exit_code": 0,
+    "wall_ms": 33762.4,
+    "reported_infer_ms": 33672.1,
+    "text": "广州市房地产中介协会分析广州市房地产中介协会分析广州市房地产中介协会分析广州市房地产中介协会分析，广州市房地产中介协会分析，广州市房地产中介协会分析，广州市房地产中介协会。分析，广州市房地产中介协会分析，广州市房地产中介协会分析，广州市房地产中介协会分析。广州市房地产中介协会分析。",
+    "stderr": ""
+  },
+  "acceptance": {
+    "baseline_reproduces_decoder_boundary": true,
+    "fixed_exit_zero": true,
+    "fixed_nonempty_text": true,
+    "fixed_faster_than_realtime": true
+  }
+}

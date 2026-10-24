@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cctype>
 #include <cmath>
 #include <cstring>
 #include <cstdlib>
@@ -37,6 +38,11 @@ int frontend_log_reference(float*,int32_t);
 namespace mobile_asr {
 namespace {
 constexpr int kWidth=768, kVocab=64000, kMaxContext=256;
+// The decoder has a hard 256-token KV cache. Each 320 ms encoder block adds
+// two audio tokens, while a segment also needs its prompt/suffix and up to 64
+// generated tokens. Roll before the cache is full so long dictation never
+// reaches DECODER_APPEND_RANGE.
+constexpr int kGeneratedTokenLimit=96, kAudioChunksPerSegment=45, kMaxFrontendFrames=18432;
 std::string join(const std::string& a,const char* b){return a.empty()?std::string(b):a+"/"+b;}
 bool regular(const std::string& p){std::ifstream f(p,std::ios::binary);return f.good();}
 std::vector<std::string> read_lines(const std::string& path){
@@ -79,8 +85,10 @@ struct Engine::Impl {
  bool stream_active=false;
  std::vector<int16_t> stream_pcm;
  std::vector<float> stream_s0,stream_s1,stream_hidden;
+ std::vector<std::string> stream_completed_texts;
  std::size_t stream_frames=0;
  int stream_chunk=0;
+ int stream_segment_chunks=0;
  int stream_encoder_remove=0;
  explicit Impl(std::string d):dir(std::move(d)),byte_map(byte_decoder()){
   try{
@@ -120,19 +128,45 @@ struct Engine::Impl {
   return bytes;
  }
  std::vector<float> embed_ids(std::initializer_list<int> ids){std::vector<float> result;result.reserve(ids.size()*kWidth);for(int id:ids){auto row=embedding(id);result.insert(result.end(),row.begin(),row.end());}return result;}
+ void reset_model_segment(){
+  // Bound both caches. Keeping the encoder cache across decoder rolls would
+  // merely move the long-session failure to encoder positions/memory.
+  stream_encoder_remove=encoder_meta.previous;std::fill(stream_s0.begin(),stream_s0.end(),0.0f);std::fill(stream_s1.begin(),stream_s1.end(),0.0f);
+  decoder->reset();auto prefix=embed_ids({529,23641,531});stream_hidden=decoder->append(prefix.data(),3);stream_segment_chunks=0;
+ }
  void begin_stream(){
   if(stream_active)throw std::runtime_error("STREAM_ALREADY_ACTIVE");
-  stream_active=true;stream_pcm.clear();stream_frames=0;stream_chunk=0;stream_encoder_remove=encoder_meta.previous;std::fill(stream_s0.begin(),stream_s0.end(),0.0f);std::fill(stream_s1.begin(),stream_s1.end(),0.0f);decoder->reset();auto prefix=embed_ids({529,23641,531});stream_hidden=decoder->append(prefix.data(),3);
+  stream_active=true;stream_pcm.clear();stream_completed_texts.clear();stream_frames=0;stream_chunk=0;reset_model_segment();
  }
+ std::string finish_decoder_segment(){
+  auto suffix=embed_ids({1912,23641,531});stream_hidden=decoder->append(suffix.data(),3);std::vector<int> generated;
+  for(int step=0;step<kGeneratedTokenLimit;step++){
+   MNN::Tensor hli(logit_input,logit_input->getDimensionType());std::copy(stream_hidden.begin(),stream_hidden.end(),hli.host<float>());logit_input->copyFromHostTensor(&hli);if(logit->runSession(logit_session)!=MNN::NO_ERROR)throw std::runtime_error("LOGIT_RUN");MNN::Tensor hlo(logit_output,MNN::Tensor::TENSORFLOW);logit_output->copyToHostTensor(&hlo);const float* logits=hlo.host<float>();int token=static_cast<int>(std::max_element(logits,logits+kVocab)-logits);generated.push_back(token);if(token==2)break;auto row=embedding(token);stream_hidden=decoder->append(row.data(),1);
+  }
+  if(generated.empty()||generated.back()!=2)throw std::runtime_error("EOS_NOT_REACHED");
+  auto normalized=normalize_transcript_tokens(generated);auto decoded=normalize_transcript_text(decode(normalized.ids));
+  if(normalized.annotation_unwrapped||decoded.annotation_unwrapped)__android_log_print(ANDROID_LOG_INFO,"IndependentASR","normalized inline A annotation token=%d text=%d (%zu tokens)",normalized.annotation_unwrapped?1:0,decoded.annotation_unwrapped?1:0,generated.size());
+  if(decoded.text.empty())throw std::runtime_error("EMPTY_TRANSCRIPT");return decoded.text;
+ }
+ static void append_transcript(std::string& joined,const std::string& part){
+  if(part.empty())return;
+  if(!joined.empty()){
+   unsigned char left=static_cast<unsigned char>(joined.back()),right=static_cast<unsigned char>(part.front());
+   if(left<128&&right<128&&std::isalnum(left)&&std::isalnum(right))joined.push_back(' ');
+  }
+  joined+=part;
+ }
+ void roll_decoder_segment(){stream_completed_texts.push_back(finish_decoder_segment());__android_log_print(ANDROID_LOG_INFO,"IndependentASR","rolled long dictation segment=%zu chunks=%d",stream_completed_texts.size(),stream_segment_chunks);reset_model_segment();}
  void encode_ready_chunks(){
   using namespace MNN;using namespace MNN::Express;
   auto info=encoder->getInfo();if(!info||info->inputs.size()!=5)throw std::runtime_error("ENCODER_INFO");
   while(stream_pcm.size()>=400+(stream_frames+31)*160){
+   if(stream_segment_chunks>=kAudioChunksPerSegment)roll_decoder_segment();
    auto features=frontend_chunk(stream_pcm.data()+stream_frames*160);
-   auto offset=_Input(info->inputs[0].dim,info->inputs[0].order,halide_type_of<int>());offset->writeMap<int>()[0]=0;offset->writeMap<int>()[1]=stream_chunk*8;offset->writeMap<int>()[2]=0;
+   auto offset=_Input(info->inputs[0].dim,info->inputs[0].order,halide_type_of<int>());offset->writeMap<int>()[0]=0;offset->writeMap<int>()[1]=stream_segment_chunks*8;offset->writeMap<int>()[2]=0;
    auto i1=_Input(info->inputs[1].dim,info->inputs[1].order,halide_type_of<float>());std::copy(stream_s1.begin(),stream_s1.end(),i1->writeMap<float>());auto i0=_Input(info->inputs[2].dim,info->inputs[2].order,halide_type_of<float>());std::copy(stream_s0.begin(),stream_s0.end(),i0->writeMap<float>());
    auto fb=_Input(info->inputs[3].dim,info->inputs[3].order,halide_type_of<float>());std::copy(features.begin(),features.end(),fb->writeMap<float>());auto mask=_Input(info->inputs[4].dim,info->inputs[4].order,halide_type_of<int>());std::fill(mask->writeMap<int>(),mask->writeMap<int>()+32,1);
-   encoder_meta.add=8;encoder_meta.remove=stream_chunk==0?stream_encoder_remove:0;auto out=encoder->onForward({offset,i1,i0,fb,mask});if(out.size()!=3)throw std::runtime_error("ENCODER_FORWARD");auto encVar=_Convert(out[0],NCHW);auto next0=_Convert(out[1],NCHW);auto next1=_Convert(out[2],NCHW);const float* enc=encVar->readMap<float>();const float* p0=next0->readMap<float>();const float* p1=next1->readMap<float>();if(!enc||!p0||!p1)throw std::runtime_error("ENCODER_MAP");std::copy(p0,p0+80,stream_s0.begin());std::copy(p1,p1+10240,stream_s1.begin());encoder_meta.sync();stream_hidden=decoder->append(enc,2);stream_frames+=32;stream_chunk++;
+   encoder_meta.add=8;encoder_meta.remove=stream_segment_chunks==0?stream_encoder_remove:0;auto out=encoder->onForward({offset,i1,i0,fb,mask});if(out.size()!=3)throw std::runtime_error("ENCODER_FORWARD");auto encVar=_Convert(out[0],NCHW);auto next0=_Convert(out[1],NCHW);auto next1=_Convert(out[2],NCHW);const float* enc=encVar->readMap<float>();const float* p0=next0->readMap<float>();const float* p1=next1->readMap<float>();if(!enc||!p0||!p1)throw std::runtime_error("ENCODER_MAP");std::copy(p0,p0+80,stream_s0.begin());std::copy(p1,p1+10240,stream_s1.begin());encoder_meta.sync();stream_hidden=decoder->append(enc,2);stream_frames+=32;stream_chunk++;stream_segment_chunks++;
   }
  }
  void accept_stream(const int16_t* pcm,size_t count){
@@ -140,18 +174,10 @@ struct Engine::Impl {
  }
  std::string finish_stream(){
   if(!stream_active)throw std::runtime_error("STREAM_NOT_ACTIVE");if(stream_pcm.size()<400)throw std::runtime_error("PCM_SAMPLE_RANGE");
-  size_t raw=(stream_pcm.size()-400)/160+1;size_t frames=((raw+31)/32)*32;if(frames<32)frames=32;if(frames>4096)throw std::runtime_error("FRONTEND_FRAME_RANGE");size_t needed=400+(frames-1)*160;stream_pcm.resize(needed,0);encode_ready_chunks();if(stream_frames!=frames)throw std::runtime_error("STREAM_FRAME_MISMATCH");
-  auto suffix=embed_ids({1912,23641,531});stream_hidden=decoder->append(suffix.data(),3);std::vector<int> generated;
-  for(int step=0;step<64;step++){
-   MNN::Tensor hli(logit_input,logit_input->getDimensionType());std::copy(stream_hidden.begin(),stream_hidden.end(),hli.host<float>());logit_input->copyFromHostTensor(&hli);if(logit->runSession(logit_session)!=MNN::NO_ERROR)throw std::runtime_error("LOGIT_RUN");MNN::Tensor hlo(logit_output,MNN::Tensor::TENSORFLOW);logit_output->copyToHostTensor(&hlo);const float* logits=hlo.host<float>();int token=static_cast<int>(std::max_element(logits,logits+kVocab)-logits);generated.push_back(token);if(token==2)break;auto row=embedding(token);stream_hidden=decoder->append(row.data(),1);
-  }
-  if(generated.empty()||generated.back()!=2)throw std::runtime_error("EOS_NOT_REACHED");
-  auto normalized=normalize_transcript_tokens(generated);
-  auto decoded=normalize_transcript_text(decode(normalized.ids));
-  if(normalized.annotation_unwrapped||decoded.annotation_unwrapped)__android_log_print(ANDROID_LOG_INFO,"IndependentASR","normalized inline A annotation token=%d text=%d (%zu tokens)",normalized.annotation_unwrapped?1:0,decoded.annotation_unwrapped?1:0,generated.size());
-  auto text=decoded.text;if(text.empty())throw std::runtime_error("EMPTY_TRANSCRIPT");stream_active=false;stream_pcm.clear();stream_hidden.clear();return text;
+  size_t raw=(stream_pcm.size()-400)/160+1;size_t frames=((raw+31)/32)*32;if(frames<32)frames=32;if(frames>kMaxFrontendFrames)throw std::runtime_error("FRONTEND_FRAME_RANGE");size_t needed=400+(frames-1)*160;stream_pcm.resize(needed,0);encode_ready_chunks();if(stream_frames!=frames)throw std::runtime_error("STREAM_FRAME_MISMATCH");
+  stream_completed_texts.push_back(finish_decoder_segment());std::string text;for(const auto& part:stream_completed_texts)append_transcript(text,part);if(text.empty())throw std::runtime_error("EMPTY_TRANSCRIPT");stream_active=false;stream_pcm.clear();stream_hidden.clear();stream_completed_texts.clear();return text;
  }
- void cancel_stream(){stream_active=false;stream_pcm.clear();stream_hidden.clear();stream_frames=0;stream_chunk=0;decoder->reset();}
+ void cancel_stream(){stream_active=false;stream_pcm.clear();stream_hidden.clear();stream_completed_texts.clear();stream_frames=0;stream_chunk=0;stream_segment_chunks=0;decoder->reset();}
  std::string run(const int16_t* pcm,size_t samples){try{begin_stream();accept_stream(pcm,samples);return finish_stream();}catch(...){cancel_stream();throw;}}
 
 };
