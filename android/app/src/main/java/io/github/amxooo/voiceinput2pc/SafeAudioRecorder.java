@@ -7,6 +7,7 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Process;
+import android.os.SystemClock;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -24,6 +25,7 @@ final class SafeAudioRecorder {
 
     private static final int SAMPLE_RATE = 16000;
     private static final int PRE_ROLL_BYTES = SAMPLE_RATE * 2 * 300 / 1000;
+    private static final long NO_AUDIO_DATA_TIMEOUT_MS = 2500;
     private final Context context;
     private final Listener listener;
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -84,16 +86,29 @@ final class SafeAudioRecorder {
         long samples = 0;
         try {
             active.startRecording();
-            listener.onStarted(activeGeneration);
+            if(active.getRecordingState()!=AudioRecord.RECORDSTATE_RECORDING)
+                throw new IllegalStateException("AudioRecord did not enter recording state");
             short[] buffer = new short[bufferBytes / 2];
             SpeechEndpointDetector endpoint = new SpeechEndpointDetector(SAMPLE_RATE);
             java.util.ArrayDeque<byte[]> preRoll=new java.util.ArrayDeque<>();
             int preRollBytes=0;boolean forwarding=false;
+            boolean firstAudio=false;
+            long noDataSince=SystemClock.elapsedRealtime();
             long nextReport = SAMPLE_RATE / 5;
             while (running.get() && active == recorder && activeGeneration == generation) {
                 int count = active.read(buffer, 0, buffer.length, AudioRecord.READ_BLOCKING);
-                if (count < 0) throw new IllegalStateException("AudioRecord read=" + count);
-                if(count==0)continue;
+                boolean current=running.get() && active==recorder && activeGeneration==generation;
+                AudioCaptureReadPolicy.Decision read=AudioCaptureReadPolicy.classify(count,current);
+                if(read==AudioCaptureReadPolicy.Decision.CLEAN_STOP)break;
+                if(read==AudioCaptureReadPolicy.Decision.FAILURE)
+                    throw new IllegalStateException("AudioRecord read="+count);
+                if(read==AudioCaptureReadPolicy.Decision.RETRY){
+                    if(SystemClock.elapsedRealtime()-noDataSince>=NO_AUDIO_DATA_TIMEOUT_MS)
+                        throw new IllegalStateException("AudioRecord returned no data");
+                    SystemClock.sleep(5);continue;
+                }
+                noDataSince=SystemClock.elapsedRealtime();
+                if(!firstAudio){firstAudio=true;listener.onStarted(activeGeneration);}
                 byte[] pcm=new byte[count*2];
                 for(int i=0;i<count;i++){pcm[i*2]=(byte)buffer[i];pcm[i*2+1]=(byte)(buffer[i]>>8);}
                 samples += count;
@@ -122,9 +137,11 @@ final class SafeAudioRecorder {
                 }
             }
         } catch (SecurityException denied) {
-            listener.onError(activeGeneration, "麦克风权限已被系统拒绝");
+            if(running.get() && active==recorder && activeGeneration==generation)
+                listener.onError(activeGeneration, "麦克风权限已被系统拒绝");
         } catch (RuntimeException failure) {
-            listener.onError(activeGeneration, "录音中断：" + failure.getClass().getSimpleName());
+            if(running.get() && active==recorder && activeGeneration==generation)
+                listener.onError(activeGeneration, "录音中断：" + failure.getClass().getSimpleName());
         } finally {
             try { if (active.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) active.stop(); }
             catch (RuntimeException ignored) {}

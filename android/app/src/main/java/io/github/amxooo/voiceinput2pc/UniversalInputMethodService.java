@@ -62,6 +62,7 @@ public class UniversalInputMethodService extends InputMethodService
     private int draftSelectionStart, draftSelectionEnd;
     private long voiceSamples;
     private boolean speechDetected;
+    private boolean audioCaptureReady;
     private long previewCommitReadyAt;
     private String localHistorySession=UUID.randomUUID().toString();
     private KeyboardController.Mode preferredTextMode = KeyboardController.Mode.T9;
@@ -782,7 +783,7 @@ public class UniversalInputMethodService extends InputMethodService
         localHistorySession=UUID.randomUUID().toString();
         inlineVoiceText="";voiceAnchor=voiceExpected=-1;unsafeRetry=false;
         keyboard.reset(); activeComposing=""; suspendedPreview=""; voiceDraftPrefix=""; voiceDraftSuffix=""; voiceSamples=0;
-        speechDetected=false;previewCommitReadyAt=0;message="";
+        speechDetected=false;audioCaptureReady=false;previewCommitReadyAt=0;message="";
         lastRenderedPreedit="";lastCandidateList=java.util.Collections.emptyList();lastCandidateSourceIndices=java.util.Collections.emptyList();lastCandidatePage=-1;lastCandidateHasNext=false;
         sensitiveField=isSensitive(info == null ? 0 : info.inputType);
         keyboard.setLearningEnabled(info != null && !sensitiveField
@@ -811,7 +812,7 @@ public class UniversalInputMethodService extends InputMethodService
         if(busy() && !targets.isRemote()) {
             InputConnection c=getCurrentInputConnection();if(c!=null)c.finishComposingText();
         }
-        inlineVoiceText="";activeComposing="";voiceTarget="";
+        inlineVoiceText="";activeComposing="";voiceTarget="";audioCaptureReady=false;
         session.invalidate();
     }
     @Override public void onFinishInputView(boolean finishingInput) {
@@ -1348,7 +1349,7 @@ public class UniversalInputMethodService extends InputMethodService
         if(session.state()==InputSession.State.PREVIEW){message="请先处理未写入文字";render();return;}
         InputSession.Identity current=session.identity();
         long generation=session.begin(current.targetId,current.packageName,current.fieldId,current.inputType).generation;
-        inlineVoiceText="";suspendedPreview="";voiceSamples=0;speechDetected=false;
+        inlineVoiceText="";suspendedPreview="";voiceSamples=0;speechDetected=false;audioCaptureReady=false;
         voiceAnchor=lastSelectionStart;voiceExpected=lastSelectionStart;voiceTarget=currentTargetKey();
         if(session.startListening(generation)) {message="准备收音";speech.start(generation,this);}
         render();
@@ -1368,7 +1369,7 @@ public class UniversalInputMethodService extends InputMethodService
                 connection.finishComposingText();
             }
         } finally {voiceWriting=false;}
-        activeComposing="";inlineVoiceText="";voiceSamples=0;speechDetected=false;
+        activeComposing="";inlineVoiceText="";voiceSamples=0;speechDetected=false;audioCaptureReady=false;
         InputSession.Identity current=session.identity();
         session.begin(current.targetId,current.packageName,current.fieldId,current.inputType);
         if(!accepted) {session.retainRejectedCommit(session.generation(),finalText);suspendedPreview=finalText;
@@ -1396,10 +1397,10 @@ public class UniversalInputMethodService extends InputMethodService
     }
     @Override public void onListening(long generation) {
         main.post(() -> { if (session.isCurrent(generation) && session.state() == InputSession.State.LISTENING) {
-            voiceMode=true; speechDetected=false;message="等待说话 · 5秒内未说话将自动退出"; render(); } });
+            voiceMode=true;audioCaptureReady=true;speechDetected=false;message="等待说话 · 5秒内未说话将自动退出";render(); } });
     }
     @Override public void onRecognizing(long generation) {
-        main.post(() -> { if (session.startRecognizing(generation)) { message="本地识别中"; render(); } });
+        main.post(() -> { if (session.startRecognizing(generation)) {audioCaptureReady=false;message="本地识别中";render(); } });
     }
     @Override public void onPartial(long generation,String text) {
         main.post(() -> {
@@ -1437,7 +1438,7 @@ public class UniversalInputMethodService extends InputMethodService
     @Override public void onError(long generation,String error) {
         main.post(() -> {
             if(!editorBound || !VoiceDockPolicy.acceptsResult(session.generation(),generation,voiceTarget,currentTargetKey())||!busy())return;
-            finishInlineSpeech(inlineVoiceText);
+            audioCaptureReady=false;finishInlineSpeech(inlineVoiceText);
             String detail=error==null?"":error.trim();
             message=detail.isEmpty()?"识别停止 · 点语音重试":detail;
             render();
@@ -1979,7 +1980,7 @@ public class UniversalInputMethodService extends InputMethodService
             dockVoice.setText(session.state()==InputSession.State.LISTENING ? "停止" : session.state()==InputSession.State.RECOGNIZING ? "取消" : "语音");
             dockTarget.setText(remote ? shortDeviceLabel(targets.deviceLabel()) : "本机");
             dockSend.setVisibility(remote ? View.VISIBLE : View.GONE);dockSend.setEnabled(targets.canSend() && !busy());
-            dockStatus.setText(busy() ? session.state()==InputSession.State.LISTENING ? "正在收音" : "识别中" : remote ? "草稿 "+codePointCount(targets.pendingText())+"字" : message.isEmpty() ? "点按说话" : message);
+            dockStatus.setText(busy() ? session.state()==InputSession.State.LISTENING ? (audioCaptureReady?"正在收音":"准备收音") : "识别中" : remote ? "草稿 "+codePointCount(targets.pendingText())+"字" : message.isEmpty() ? "点按说话" : message);
             // Do not derive a WRAP_CONTENT viewport from a child positioned as a
             // fraction of that same viewport. That creates a resize feedback loop.
             // Keep the voice viewport stable across editing, hub and device menus.
@@ -2033,7 +2034,7 @@ public class UniversalInputMethodService extends InputMethodService
         preview.setMinLines(voiceSurface ? 3 : 1);
         preview.setMaxLines(voiceSurface ? 5 : 2);
         preview.setFocusable(isPreview); preview.setFocusableInTouchMode(isPreview); preview.setCursorVisible(isPreview);
-        preview.setHint(session.state() == InputSession.State.LISTENING ? "正在收音…"
+        preview.setHint(session.state() == InputSession.State.LISTENING ? (audioCaptureReady?"正在收音…":"正在准备麦克风…")
                 : session.state() == InputSession.State.RECOGNIZING ? "正在生成最终文字…"
                 : isPreview ? "可修改；点左侧“续说”追加，点右侧“上屏”写入输入框" : "点击左侧“语音”开始说话");
         LinearLayout.LayoutParams previewParams=(LinearLayout.LayoutParams)preview.getLayoutParams();

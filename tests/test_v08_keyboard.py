@@ -44,7 +44,7 @@ class KeyboardTests(unittest.TestCase):
     def test_controller_and_preview_contract(self):
         java = ROOT / 'android/app/src/main/java/io/github/amxooo/voiceinput2pc'
         with tempfile.TemporaryDirectory() as out:
-            subprocess.run(['javac', '-d', out, *(str(java / x) for x in ['ChineseInputEngine.java', 'KeyboardController.java', 'EditorCompatibility.java', 'InputSession.java', 'ImePanelController.java', 'OutputTargetController.java', 'ImeLayoutSpec.java', 'SpeechEndpointDetector.java', 'VoiceDraft.java']), str(ROOT / 'tests/KeyboardControllerTest.java'), str(ROOT / 'tests/ImePanelControllerTest.java'), str(ROOT / 'tests/OutputTargetControllerTest.java'), str(ROOT / 'tests/ImeLayoutSpecTest.java'), str(ROOT / 'tests/SpeechEndpointDetectorTest.java'), str(ROOT / 'tests/VoiceDraftTest.java')], check=True)
+            subprocess.run(['javac', '-d', out, *(str(java / x) for x in ['ChineseInputEngine.java', 'KeyboardController.java', 'EditorCompatibility.java', 'InputSession.java', 'ImePanelController.java', 'OutputTargetController.java', 'ImeLayoutSpec.java', 'SpeechEndpointDetector.java', 'VoiceDraft.java', 'AudioCaptureReadPolicy.java', 'StartupPcmBuffer.java']), str(ROOT / 'tests/KeyboardControllerTest.java'), str(ROOT / 'tests/ImePanelControllerTest.java'), str(ROOT / 'tests/OutputTargetControllerTest.java'), str(ROOT / 'tests/ImeLayoutSpecTest.java'), str(ROOT / 'tests/SpeechEndpointDetectorTest.java'), str(ROOT / 'tests/VoiceDraftTest.java'), str(ROOT / 'tests/AudioCaptureLifecycleTest.java')], check=True)
             keyboard = subprocess.run(['java', '-cp', out, 'io.github.amxooo.voiceinput2pc.KeyboardControllerTest'], check=True, text=True, capture_output=True)
             self.assertIn('keyboard checks passed', keyboard.stdout)
             panels = subprocess.run(['java', '-cp', out, 'io.github.amxooo.voiceinput2pc.ImePanelControllerTest'], check=True, text=True, capture_output=True)
@@ -57,4 +57,6 @@ class KeyboardTests(unittest.TestCase):
             self.assertIn('speech endpoint checks passed', endpoint.stdout)
             draft = subprocess.run(['java', '-cp', out, 'io.github.amxooo.voiceinput2pc.VoiceDraftTest'], check=True, text=True, capture_output=True)
             self.assertIn('voice draft checks passed', draft.stdout)
+            audio = subprocess.run(['java', '-cp', out, 'io.github.amxooo.voiceinput2pc.AudioCaptureLifecycleTest'], check=True, text=True, capture_output=True)
+            self.assertIn('audio capture lifecycle checks passed', audio.stdout)
 if __name__ == '__main__': unittest.main()
