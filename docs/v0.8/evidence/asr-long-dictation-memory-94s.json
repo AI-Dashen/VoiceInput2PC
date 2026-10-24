@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "test": "v0.8.38 94s rolling stream bounded memory",
+  "duration_seconds": 94.182,
+  "exit_code": 0,
+  "peak_rss_kb": 312924,
+  "peak_pss_kb": 309456,
+  "sample_count": 1324,
+  "stdout": "TEXT 广州市房地产中介协会分析广州市房地产中介协会分析广州市房地产中介协会分析广州市房地产中介协会分析，广州市房地产中介协会分析，广州市房地产中介协会分析，广州市房地产中介协会。分析，广州市房地产中介协会分析，广州市房地产中介协会分析，广州市房地产中介协会分析。广州市房地产中介协会分析，广州市房地产中介协会分析，广州市房地产中介协会分析，广州市房地产产中介协会分析，广州市房地产中介协会分析，广州市房地产中介协会分析，广州市房地产中介协会分析。广州市房地产中介协会分析广州市房地产中介协会分析广州市房地产中介协会分析广州州市房地产中介协会分析，广州市房地产中介协会分析。\nLOAD_MS 85.1863\nINFER_MS 32757.9\n",
+  "stderr": "",
+  "checkpoints": [
+    {
+      "elapsed_ms": 0,
+      "rss_kb": 1484,
+      "pss_kb": 491
+    },
+    {
+      "elapsed_ms": 1204,
+      "rss_kb": 211520,
+      "pss_kb": 207972
+    },
+    {
+      "elapsed_ms": 2461,
+      "rss_kb": 241976,
+      "pss_kb": 238576
+    },
+    {
+      "elapsed_ms": 3757,
+      "rss_kb": 260128,
+      "pss_kb": 256688
+    },
+    {
+      "elapsed_ms": 5013,
+      "rss_kb": 221908,
+      "pss_kb": 218480
+    },
+    {
+      "elapsed_ms": 6280,
+      "rss_kb": 249536,
+      "pss_kb": 245908
+    },
+    {
+      "elapsed_ms": 7571,
+      "rss_kb": 261256,
+      "pss_kb": 257828
+    },
+    {
+      "elapsed_ms": 8824,
+      "rss_kb": 222972,
+      "pss_kb": 219416
+    },
+    {
+      "elapsed_ms": 10093,
+      "rss_kb": 250200,
+      "pss_kb": 246688
+    },
+    {
+      "elapsed_ms": 11378,
+      "rss_kb": 261896,
+      "pss_kb": 258383
+    },
+    {
+      "elapsed_ms": 12659,
+      "rss_kb": 206196,
+      "pss_kb": 202647
+    },
+    {
+      "elapsed_ms": 13937,
+      "rss_kb": 223468,
+      "pss_kb": 219951
+    },
+    {
+      "elapsed_ms": 15238,
+      "rss_kb": 239884,
+      "pss_kb": 236319
+    },
+    {
+      "elapsed_ms": 16571,
+      "rss_kb": 307532,
+      "pss_kb": 304023
+    },
+    {
+      "elapsed_ms": 17905,
+      "rss_kb": 262592,
+      "pss_kb": 259067
+    },
+    {
+      "elapsed_ms": 19212,
+      "rss_kb": 206828,
+      "pss_kb": 203327
+    },
+    {
+      "elapsed_ms": 20479,
+      "rss_kb": 223704,
+      "pss_kb": 220211
+    },
+    {
+      "elapsed_ms": 21758,
+      "rss_kb": 251128,
+      "pss_kb": 247599
+    },
+    {
+      "elapsed_ms": 23098,
+      "rss_kb": 262620,
+      "pss_kb": 259127
+    },
+    {
+      "elapsed_ms": 24447,
+      "rss_kb": 263012,
+      "pss_kb": 259579
+    },
+    {
+      "elapsed_ms": 25761,
+      "rss_kb": 224316,
+      "pss_kb": 220811
+    },
+    {
+      "elapsed_ms": 27080,
+      "rss_kb": 240700,
+      "pss_kb": 237279
+    },
+    {
+      "elapsed_ms": 28414,
+      "rss_kb": 262928,
+      "pss_kb": 259559
+    },
+    {
+      "elapsed_ms": 29732,
+      "rss_kb": 263616,
+      "pss_kb": 260067
+    },
+    {
+      "elapsed_ms": 31008,
+      "rss_kb": 224572,
+      "pss_kb": 221111
+    },
+    {
+      "elapsed_ms": 32301,
+      "rss_kb": 241184,
+      "pss_kb": 237771
+    }
+  ]
+}
