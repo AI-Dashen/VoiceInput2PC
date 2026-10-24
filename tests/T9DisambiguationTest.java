@@ -55,7 +55,7 @@ public final class T9DisambiguationTest {
                 "64 426",6,0,6,Arrays.asList("ni hao"),Arrays.asList("ni","mi"),"");
         check(controller.displayPreedit(s).equals("ni hao"),"panel shows actual decoder spelling");
         check(controller.displayComposition(s).equals("你好"),"host compatibility unchanged");
-        check(controller.displayPreedit(old).equals("继续输入或删除"),"panel exposes safe recovery status without numeric lookup code");
+        check(controller.displayPreedit(old).equals("未匹配 · 继续输入将自动分段"),"panel exposes non-blocking recovery status without numeric lookup code");
         System.out.println("T9DisambiguationTest passed: sequential constraints, edit, undo, selected-prefix preservation and deletion");
     }
 }

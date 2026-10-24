@@ -1010,7 +1010,59 @@ public class UniversalInputMethodService extends InputMethodService
         ChineseInputEngine.Snapshot stateBeforeKey=keyboard.isT9ComposingKey(value)
                 ? keyboard.snapshot() : null;
         String literal = keyboard.type(value,stateBeforeKey);
-        if (literal != null) commitLiteral(literal); else syncComposition();
+        if (literal != null) {commitLiteral(literal);return;}
+        ChineseInputEngine.Snapshot stateAfterKey=keyboard.snapshot();
+        if(keyboard.t9NoMatchRecoveryNeeded(stateAfterKey)) {
+            if(!recoverT9NoMatch(stateAfterKey))return;
+        }
+        syncComposition();
+    }
+    /**
+     * A T9 code with no Chinese candidate is never allowed to become a modal
+     * dead end. Commit the longest valid prefix, then replay the untouched tail
+     * as a fresh composition. If even a one-key segment is invalid, clear that
+     * invalid lookup in the same event. T9 digits never leak into the editor.
+     */
+    private boolean recoverT9NoMatch(ChineseInputEngine.Snapshot initial) {
+        if(initial==null || keyboard.mode()!=KeyboardController.Mode.T9
+                || !keyboard.t9NoMatchRecoveryNeeded(initial))return true;
+        StringBuilder tail=new StringBuilder();
+        ChineseInputEngine.Snapshot prefix=initial;
+        int candidate=-1;
+        while(!prefix.numericInput.isEmpty()) {
+            String code=prefix.numericInput;
+            tail.insert(0,code.charAt(code.length()-1));
+            keyboard.backspace();
+            prefix=keyboard.snapshot();
+            candidate=keyboard.firstCommittableCandidateIndex(prefix);
+            if(candidate>=0)break;
+        }
+        if(candidate>=0) {
+            if(!commitCandidate(candidate))return false;
+        } else keyboard.reset();
+        ChineseInputEngine.Snapshot replay=keyboard.snapshot();
+        for(int i=0;i<tail.length();i++) {
+            char key=tail.charAt(i);
+            // A separator cannot start a new T9 segment.
+            if(key=='\'' && replay.numericInput.isEmpty())continue;
+            keyboard.type(String.valueOf(key),replay);
+            replay=keyboard.snapshot();
+            if(keyboard.firstCommittableCandidateIndex(replay)<0 && replay.numericInput.length()>1) {
+                // Preserve forward progress even for an entirely arbitrary key
+                // stream: discard the still-unmatched prefix and retain the
+                // newest key as the next lookup segment.
+                keyboard.reset();
+                replay=keyboard.snapshot();
+                if(key!='\'') {keyboard.type(String.valueOf(key),replay);replay=keyboard.snapshot();}
+            }
+        }
+        // The invariant is strict: a composition that has no visible candidate
+        // must never survive the key event and trap later actions.
+        if(!replay.numericInput.isEmpty() && keyboard.firstCommittableCandidateIndex(replay)<0) {
+            keyboard.reset();
+            message="未匹配的九宫格输入已自动清除";
+        } else message="九宫格已自动分段";
+        return true;
     }
     private boolean rawEditor() {
         EditorInfo info=getCurrentInputEditorInfo();
@@ -1110,6 +1162,15 @@ public class UniversalInputMethodService extends InputMethodService
             current.add(state.candidates.get(i));sourceIndices.add(i);
         }
         int page=state.page;boolean hasNext=state.hasNext;
+        if(current.isEmpty()) {
+            candidates.removeAllViews();
+            lastCandidateList=java.util.Collections.emptyList();
+            lastCandidateSourceIndices=java.util.Collections.emptyList();
+            lastCandidatePage=-1;lastCandidateHasNext=false;
+            candidateScroller.setVisibility(View.INVISIBLE);
+            return;
+        }
+        candidateScroller.setVisibility(View.VISIBLE);
         boolean pageChanged = page != lastCandidatePage;
         boolean navChanged = hasNext != lastCandidateHasNext;
         boolean sizeChanged = current.size() != lastCandidateList.size();
@@ -1167,12 +1228,15 @@ public class UniversalInputMethodService extends InputMethodService
         else accepted=routeStable(result);
         return accepted;
     }
-    /** Mode changes never decide or discard an unfinished composition. */
+    /** Settle composition deterministically; mode switches must never deadlock. */
     private boolean settleKeyboardComposition() {
         ChineseInputEngine.Snapshot state=keyboard.snapshot();
         if(state.rawInput.isEmpty())return true;
-        message="请先选词或删除当前输入";
-        syncComposition();return false;
+        int candidate=keyboard.firstCommittableCandidateIndex(state);
+        if(candidate>=0)return commitCandidate(candidate);
+        clearComposition();
+        message="未匹配的九宫格输入已清除";
+        return true;
     }
     private void clearComposition() {
         if (keyboard != null) keyboard.reset();
@@ -1188,8 +1252,8 @@ public class UniversalInputMethodService extends InputMethodService
         ChineseInputEngine.Snapshot state=keyboard.snapshot();
         if(keyboard.chinese() && !state.rawInput.isEmpty()) {
             int candidate=keyboard.firstCommittableCandidateIndex(state);
-            if(candidate<0) {message="当前组合没有候选，请继续输入或删除";render();return;}
-            if(!commitCandidate(candidate))return;
+            if(candidate>=0) {if(!commitCandidate(candidate))return;}
+            else clearComposition();
         }
         if (session.state() == InputSession.State.PREVIEW) { editPreview(value,false); render(); return; }
         routeStable(value);
@@ -1207,7 +1271,10 @@ public class UniversalInputMethodService extends InputMethodService
         ChineseInputEngine.Snapshot state=keyboard.snapshot();
         int candidate=keyboard.firstCommittableCandidateIndex(state);
         if (keyboard.chinese() && candidate>=0) selectCandidate(candidate);
-        else if (state.rawInput.isEmpty()) commitLiteral(" ");
+        else {
+            if(!state.rawInput.isEmpty())clearComposition();
+            commitLiteral(" ");
+        }
     }
     private void backspace() {
         if (!panels.isPrimary() || busy()) return;
@@ -1270,18 +1337,19 @@ public class UniversalInputMethodService extends InputMethodService
         if (!keyboardState.rawInput.isEmpty()) {
             if(keyboard.mode()==KeyboardController.Mode.T9) {
                 int candidate=keyboard.firstCommittableCandidateIndex(keyboardState);
-                if(candidate>=0)selectCandidate(candidate);
-                else {message="当前组合没有候选，请继续输入或删除";render();}
-                return;
-            }
+                if(candidate>=0) {selectCandidate(candidate);return;}
+                clearComposition();
+                // Fall through: Enter keeps its host action even after recovery.
+            } else {
             // Conventional Chinese IME contract: Space chooses the first Chinese
             // candidate; Enter commits exactly the Latin letters the user typed.
             // This also gives an explicit escape hatch for names, commands and URLs.
-            if(routeStable(keyboardState.rawInput,"ime_keyboard")) {
-                keyboard.reset();
-                syncComposition();
+                if(routeStable(keyboardState.rawInput,"ime_keyboard")) {
+                    keyboard.reset();
+                    syncComposition();
+                }
+                return;
             }
-            return;
         }
         if (targets.isRemote()) { sendRemoteDraft(); return; }
         InputConnection connection=getCurrentInputConnection(); EditorInfo info=getCurrentInputEditorInfo();

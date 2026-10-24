@@ -2,8 +2,6 @@ package io.github.amxooo.voiceinput2pc;
 
 /** Pure keyboard state. The host controls InputConnection and asynchronous speech. */
 public final class KeyboardController {
-    /** Keep only one short phrase in Rime's ambiguous T9 search window. */
-    public static final int T9_NO_MATCH_RECOVERY_CODE_LENGTH = 8;
     public enum Mode { PINYIN, T9, ENGLISH, NUMBERS, SYMBOLS }
     private final ChineseInputEngine engine;
     private Mode mode = Mode.PINYIN;
@@ -38,9 +36,9 @@ public final class KeyboardController {
         return mode == Mode.ENGLISH && uppercase ? key.toUpperCase(java.util.Locale.ROOT) : key;
     }
     /**
-     * A long lookup with no real candidate is not useful user text. Recover on
-     * the next key instead of leaving an invisible composition that can only be
-     * escaped by deleting every digit.
+     * Any T9 lookup with no real candidate must be recovered in the same key
+     * event. It must never survive as an invisible composition that blocks
+     * typing, switching modes, Space, or Enter.
      */
     public boolean t9NoMatchRecoveryNeeded() {
         return t9NoMatchRecoveryNeeded(null);
@@ -48,7 +46,7 @@ public final class KeyboardController {
     public boolean t9NoMatchRecoveryNeeded(ChineseInputEngine.Snapshot current) {
         if (mode != Mode.T9) return false;
         ChineseInputEngine.Snapshot state=current == null ? engine.snapshot() : current;
-        return state.numericInput.length() >= T9_NO_MATCH_RECOVERY_CODE_LENGTH
+        return !state.numericInput.isEmpty()
                 && firstCommittableCandidateIndex(state) < 0;
     }
     public boolean isT9ComposingKey(String key) {
@@ -100,7 +98,7 @@ public final class KeyboardController {
         // but still make the live state visible so it cannot look frozen.
         if (mode == Mode.T9) {
             String safe=hideT9LookupDigits(value);
-            return safe.isEmpty() && !state.numericInput.isEmpty() ? "继续输入或删除" : safe;
+            return safe.isEmpty() && !state.numericInput.isEmpty() ? "未匹配 · 继续输入将自动分段" : safe;
         }
         return value;
     }

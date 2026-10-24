@@ -150,7 +150,7 @@ public final class ImeEditingRegressionTest extends InstrumentationTestCase {
             assertEquals("停止",((TextView)field(service,"enterKey")).getText().toString());
         }catch(Exception e){throw new AssertionError(e);}});
     }
-    public void testT9ContinuousInputNeverLeaksLookupDigits() throws Throwable {
+    public void testT9NoCandidateAutoSegmentsAndNeverLocksTheIme() throws Throwable {
         runTestOnUiThread(()-> {try {
             TestIme service=(TestIme)fixture("");
             Context context=getInstrumentation().getTargetContext();
@@ -161,29 +161,45 @@ public final class ImeEditingRegressionTest extends InstrumentationTestCase {
             InputSession session=(InputSession)field(service,"session");
             session.begin("fixture","fixture",1,1);
             final StringBuilder raw=new StringBuilder();
-            ChineseInputEngine noMatch=new ChineseInputEngine(){
+            final boolean[] forceNoMatch={false};
+            ChineseInputEngine segmented=new ChineseInputEngine(){
                 public Snapshot snapshot(){
                     String value=raw.toString();
-                    return new Snapshot(value,value.isEmpty()?Collections.emptyList():Collections.singletonList(value),
+                    boolean matched=!forceNoMatch[0] && !value.isEmpty() && value.length()<=2;
+                    return new Snapshot(value,value.isEmpty()?Collections.emptyList():Collections.singletonList(matched?"词":value),
                             0,false,true,"",value,value.length(),0,value.length(),
                             Collections.emptyList(),Collections.emptyList(),"",
                             Collections.emptyList(),-1,false,value);
                 }
                 public void input(char c){raw.append(c);}
                 public void backspace(){if(raw.length()>0)raw.setLength(raw.length()-1);}
-                public String select(int index){return null;}
+                public String select(int index){
+                    if(index!=0 || forceNoMatch[0] || raw.length()==0 || raw.length()>2)return null;
+                    raw.setLength(0);return "词";
+                }
                 public void nextPage(){}public void previousPage(){}
                 public void setLayout(Layout layout){}public void reset(){raw.setLength(0);}public void close(){}
             };
-            set(service,"keyboard",new KeyboardController(noMatch));
+            KeyboardController controller=new KeyboardController(segmented);
+            set(service,"keyboard",controller);
             call(service,"switchMode",new Class[]{KeyboardController.Mode.class},KeyboardController.Mode.T9);
-            for(int i=0;i<40;i++)call(service,"type",new Class[]{String.class},i%2==0?"2":"3");
-            assertEquals("all physical keys reach the decoder",40,raw.length());
-            assertEquals("private T9 digits never enter the host editor","",host.getText().toString());
-            call(service,"backspace",new Class[0]);
-            assertEquals(39,raw.length());
-            call(service,"clearComposition",new Class[0]);
-            assertEquals(0,raw.length());
+
+            // The third key has no candidate: the valid prefix is committed and
+            // the untouched tail immediately starts a new composition.
+            call(service,"type",new Class[]{String.class},"2");
+            call(service,"type",new Class[]{String.class},"3");
+            call(service,"type",new Class[]{String.class},"4");
+            assertEquals("valid prefix committed exactly once","词",host.getText().toString());
+            assertEquals("tail retained for continued typing","4",raw.toString());
+
+            // Even an entirely unmatched stream is cleared in the same event.
+            // It cannot block switching mode and private digits never leak.
+            forceNoMatch[0]=true;
+            call(service,"type",new Class[]{String.class},"5");
+            assertEquals("unmatched lookup cannot survive","",raw.toString());
+            call(service,"switchMode",new Class[]{KeyboardController.Mode.class},KeyboardController.Mode.ENGLISH);
+            assertEquals(KeyboardController.Mode.ENGLISH,controller.mode());
+            assertEquals("private T9 digits never enter the host editor","词",host.getText().toString());
 
             // Chinese 26-key is a real Rime composition mode rather than an English alias.
             final StringBuilder pinyin=new StringBuilder();
@@ -206,7 +222,7 @@ public final class ImeEditingRegressionTest extends InstrumentationTestCase {
             for(char c:"nihao".toCharArray())call(service,"type",new Class[]{String.class},String.valueOf(c));
             assertEquals("nihao",pinyin.toString());
             call(service,"space",new Class[0]);
-            assertEquals("你好",host.getText().toString());
+            assertEquals("词你好",host.getText().toString());
         }catch(Exception e){throw new AssertionError(e);}});
     }
     public void testVoiceDraftTypographyAndSegmentCap() throws Throwable {

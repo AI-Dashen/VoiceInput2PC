@@ -25,7 +25,7 @@ public final class KeyboardControllerTest {
         f.numericCandidate=false;f.mixedNumericCandidate=true;equal("2号",k.displayComposition(k.snapshot()));
         equal(true,k.displayableCandidate("2号"));equal(true,k.displayableCandidate("3D打印"));
         equal(false,k.displayableCandidate("222' 33"));f.mixedNumericCandidate=false;
-        equal("继续输入或删除",k.displayPreedit(k.snapshot()));f.numericCandidate=false;
+        equal("未匹配 · 继续输入将自动分段",k.displayPreedit(k.snapshot()));f.numericCandidate=false;
         equal(true,k.displayableCandidate("候选一"));equal(0,k.firstCommittableCandidateIndex(k.snapshot()));
         equal(true,EditorCompatibility.rawEditor(0,"some.terminal"));
         equal(true,EditorCompatibility.rawEditor(1,"com.termux"));
@@ -43,7 +43,7 @@ public final class KeyboardControllerTest {
         t9.backspace();equal(39,continuous.raw.length());
         Fixture unmatched=new Fixture();unmatched.numericCandidate=true;
         KeyboardController recovery=new KeyboardController(unmatched);recovery.setMode(KeyboardController.Mode.T9);
-        for(int i=0;i<KeyboardController.T9_NO_MATCH_RECOVERY_CODE_LENGTH;i++)recovery.type("2");
+        recovery.type("2");
         equal(true,recovery.t9NoMatchRecoveryNeeded());
         ChineseInputEngine.Snapshot reused=recovery.snapshot();int reads=unmatched.snapshots;
         equal(null,recovery.type("2",reused));equal(reads,unmatched.snapshots);
