@@ -1,0 +1,11 @@
+version = 1
+
+[[annotations]]
+path = [
+  "*.md", "*.py", "*.ps1", "*.spec", "*.txt", "*.toml",
+  "android/**", "docs/**", "mobile/**", "receiver/**", "release/**",
+  "scripts/**", "tests/**"
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 AMXOOO and VoiceInput2PC contributors"
+SPDX-License-Identifier = "MIT"

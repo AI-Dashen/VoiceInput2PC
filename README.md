@@ -64,4 +64,7 @@ README记录 Windows 10/11 与 Android 8+ 目标环境；当前源码、候选�
 
 ## 许可证与依赖
 
-见 [LICENSE](LICENSE)。第三方工具、模型及素材保留各自的许可与权利边界。
+源码采用 [MIT License](LICENSE)。版权与项目身份见 [NOTICE](NOTICE)、
+[AUTHORS.md](AUTHORS.md) 和 [TRADEMARKS.md](TRADEMARKS.md)；第三方组件见
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。修改版可以依照 MIT 使用，
+但不得冒充官方发布。
